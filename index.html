@@ -1,869 +1,1251 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="">
+<html lang="pt-BR" class=""> <!-- A classe 'dark' será adicionada aqui -->
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lista de Tarefas Elegante</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tarefas Elegante</title>
+    
+    <!-- Tailwind CSS Script -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    
+    <!-- Google Fonts para uma tipografia moderna -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* Estilização personalizada sobre o Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+        
+        /* Efeito de transição suave para as tarefas */
+        .task-item, .subtask-item, .task-entry {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
 
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { darkMode: 'class' }
-  </script>
+        /* Animação para riscar o texto */
+        .task-text {
+            position: relative;
+            transition: color 0.4s ease;
+        }
+        
+        .task-text::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #34495e;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
 
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet"/>
+        .completed .task-text {
+            color: #9ca3af; /* cinza-400 do Tailwind */
+        }
+        .completed .task-text::after {
+            transform: scaleX(1);
+        }
+        .completed .task-description {
+            color: #9ca3af;
+        }
+        .dark .completed .task-text, .dark .completed .task-description {
+             color: #4b5563; /* cinza-600 */
+        }
 
-  <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        /* Esconder os botões de ação e mostrar no hover */
+        .task-actions {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
 
-  <style>
-    body { font-family: 'Inter', sans-serif; transition: background-color .3s ease; }
-    .task-item, .subtask-item, .task-entry { transition: all .3s ease; overflow: hidden; }
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
 
-    .task-text { position: relative; transition: color .4s ease; }
-    .task-text::after {
-      content:''; position:absolute; top:50%; left:0; width:100%; height:2px; background:#34495e;
-      transform:scaleX(0); transform-origin:left; transition:transform .4s ease;
-    }
-    .completed .task-text { color:#9ca3af; }
-    .completed .task-text::after { transform:scaleX(1); }
-    .completed .task-description { color:#9ca3af; }
-    .dark .completed .task-text, .dark .completed .task-description { color:#4b5563; }
+        .subtask-item .delete-button {
+             opacity: 0;
+        }
+        .subtask-item:hover .delete-button {
+             opacity: 1;
+        }
 
-    .task-actions { opacity:0; transition:opacity .3s ease; }
-    .task-item:hover .task-actions { opacity:1; }
-    .subtask-item .delete-button { opacity:0; }
-    .subtask-item:hover .delete-button { opacity:1; }
-
-    .filter-btn.active { background-color:#3b82f6; color:#fff; }
-    .dark .filter-btn.active { background-color:#3b82f6; }
-    .tab-btn.active { border-color:#3b82f6; color:#3b82f6; }
-    .dark .tab-btn.active { border-color:#3b82f6; color:#3b82f6; }
-
-    #chat-history { height:400px; overflow-y:auto; }
-  </style>
+        .filter-btn.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .dark .filter-btn.active {
+            background-color: #3b82f6;
+        }
+        .tab-btn.active {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .dark .tab-btn.active {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        #chat-history {
+            height: 400px;
+            overflow-y: auto;
+        }
+    </style>
 </head>
-
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
 
-  <!-- Contêiner Principal -->
-  <div class="bg-white dark:bg-gray-800 w-full max-w-lg mx-auto rounded-2xl shadow-2xl p-6 md:p-8 transition-colors duration-300 relative">
-
-    <!-- Ações -->
-    <div class="absolute top-5 right-5 flex items-center gap-2 z-10">
-      <button id="api-key-btn" title="Configurar API Key" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
-        <i class="fas fa-key"></i>
-      </button>
-      <button id="download-btn" title="Baixar tarefas" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
-        <i class="fas fa-download"></i>
-      </button>
-      <button id="theme-toggle" title="Alternar tema" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
-        <i id="theme-toggle-dark-icon" class="fas fa-moon hidden"></i>
-        <i id="theme-toggle-light-icon" class="fas fa-sun hidden"></i>
-      </button>
-    </div>
-
-    <!-- Abas -->
-    <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
-      <nav id="tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
-        <button data-tab="tasks" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Tarefas</button>
-        <button data-tab="chat" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">Chat IA</button>
-        <button data-tab="analysis" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">Análise</button>
-      </nav>
-    </div>
-
-    <!-- Conteúdo -->
-    <div id="tab-content">
-      <!-- Tarefas -->
-      <div id="tasks-view">
-        <header class="text-center mb-8 pt-12">
-          <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Minhas Tarefas</h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-2">Mantenha seu dia organizado e produtivo.</p>
-        </header>
-
-        <form id="task-form" class="flex items-center gap-3 mb-6">
-          <input id="task-input" type="text" placeholder="Ex: Fazer uma caminhada..." class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" autocomplete="off">
-          <button type="submit" class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
-            <i class="fas fa-plus"></i>
-          </button>
-        </form>
-
-        <div id="status-summary" class="mb-8 space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"></div>
-
-        <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
-          <div class="relative w-full sm:flex-grow">
-            <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input id="search-input" type="text" placeholder="Pesquisar tarefas..." class="w-full pl-10 p-2.5 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
-          </div>
-        </div>
-
-        <div id="filter-buttons" class="flex items-center gap-2 flex-wrap justify-center mb-6"></div>
-
-        <div id="task-list" class="space-y-4"></div>
-      </div>
-
-      <!-- Chat -->
-      <div id="chat-view" class="hidden">
-        <header class="text-center mb-8">
-          <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Assistente IA</h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-2">Descreva o que precisa e eu criarei as tarefas para você.</p>
-        </header>
-
-        <div id="chat-history" class="mb-4 space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-          <div class="flex justify-start">
-            <div class="bg-blue-100 dark:bg-blue-900/50 text-gray-800 dark:text-gray-200 p-3 rounded-lg max-w-xs">
-              Olá! Como posso te ajudar a se organizar hoje?
-            </div>
-          </div>
-        </div>
-
-        <form id="chat-form" class="flex items-center gap-3">
-          <input id="chat-input" type="text" placeholder="Digite sua mensagem..." class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" autocomplete="off">
-          <button type="submit" class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
-            <i class="fas fa-paper-plane"></i>
-          </button>
-        </form>
-      </div>
-
-      <!-- Análise -->
-      <div id="analysis-view" class="hidden">
-        <header class="text-center mb-8">
-          <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-2">Seu progresso em um piscar de olhos.</p>
-        </header>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-center">
-            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total de Tarefas</h4>
-            <p id="kpi-total" class="text-3xl font-bold text-gray-800 dark:text-gray-100">0</p>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-center">
-            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">Concluídas</h4>
-            <p id="kpi-completed" class="text-3xl font-bold text-green-500 dark:text-green-400">0</p>
-          </div>
-          <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-center">
-            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">Pendentes</h4>
-            <p id="kpi-pending" class="text-3xl font-bold text-yellow-500 dark:text-yellow-400">0</p>
-          </div>
-        </div>
-
-        <div class="space-y-8">
-          <div>
-            <h3 class="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">Tarefas por Status</h3>
-            <canvas id="status-pie-chart"></canvas>
-          </div>
-          <div>
-            <h3 class="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">Atividade nos Últimos 7 Dias</h3>
-            <canvas id="activity-bar-chart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal API Key -->
-  <div id="api-key-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md relative">
-      <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-        <i class="fas fa-times text-xl"></i>
-      </button>
-      <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">Configurar API Key do Gemini</h3>
-      <div>
-        <label for="api-key-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sua API Key</label>
-        <div class="mt-1">
-          <input type="password" id="api-key-input" class="block w-full p-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-800 dark:text-gray-200" placeholder="Cole sua chave aqui...">
-        </div>
-        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Obtenha sua API Key aqui</a>
-      </div>
-      <div class="mt-5 sm:mt-6">
-        <button id="save-api-key-btn" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">
-          Salvar
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Globals
-      const taskForm = document.getElementById('task-form');
-      const taskInput = document.getElementById('task-input');
-      const taskList = document.getElementById('task-list');
-      const searchInput = document.getElementById('search-input');
-      const filterButtonsContainer = document.getElementById('filter-buttons');
-      let apiKey = localStorage.getItem('gemini-api-key') || "";
-      let activeFilter = 'Todos';
-
-      const statuses = [
-        { name: 'Aberto', classes: 'bg-blue-100 text-blue-800', darkClasses: 'dark:bg-blue-900/50 dark:text-blue-300', color: '#3b82f6' },
-        { name: 'Em Andamento', classes: 'bg-yellow-100 text-yellow-800', darkClasses: 'dark:bg-yellow-900/50 dark:text-yellow-300', color: '#f59e0b' },
-        { name: 'Desenvolvido', classes: 'bg-purple-100 text-purple-800', darkClasses: 'dark:bg-purple-900/50 dark:text-purple-300', color: '#8b5cf6' },
-        { name: 'Teste', classes: 'bg-indigo-100 text-indigo-800', darkClasses: 'dark:bg-indigo-900/50 dark:text-indigo-300', color: '#6366f1' },
-        { name: 'Finalizado', classes: 'bg-green-100 text-green-800', darkClasses: 'dark:bg-green-900/50 dark:text-green-300', color: '#22c55e' }
-      ];
-      const finalizadoIndex = 4;
-      const emAndamentoIndex = 1;
-
-      let statusPieChart = null;
-      let activityBarChart = null;
-
-      // UI builders
-      function initializeStatusSummary () {
-        const el = document.getElementById('status-summary');
-        if (!el) return;
-        el.innerHTML = statuses.map((s, i)=>`
-          <div>
-            <div class="flex justify-between items-center mb-1">
-              <span class="text-sm font-medium text-gray-600 dark:text-gray-300">${s.name}</span>
-              <span id="status-percent-${i}" class="text-sm font-medium text-gray-500 dark:text-gray-400">0 (0%)</span>
-            </div>
-            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-              <div id="status-bar-${i}" class="h-2.5 rounded-full transition-all duration-500" style="width:0%;background-color:${s.color}"></div>
-            </div>
-          </div>
-        `).join('');
-      }
-
-      function updateStatusSummary () {
-        const allTasks = document.querySelectorAll('.task-item');
-        const total = allTasks.length;
-        const counts = Array(statuses.length).fill(0);
-        allTasks.forEach(t=>{
-          const b = t.querySelector('.status-badge');
-          if (b) counts[parseInt(b.dataset.statusIndex)]++;
-        });
-        counts.forEach((c,i)=>{
-          const pct = total>0 ? ((c/total)*100).toFixed(0) : 0;
-          const p = document.getElementById(`status-percent-${i}`);
-          const bar = document.getElementById(`status-bar-${i}`);
-          if (p&&bar){ p.textContent = `${c} (${pct}%)`; bar.style.width = `${pct}%`; }
-        });
-      }
-
-      function updateDashboard () {
-        const allEntries = document.querySelectorAll('.task-entry');
-        const total = allEntries.length;
-        const completed = document.querySelectorAll('.task-item.completed').length;
-        document.getElementById('kpi-total').textContent = total;
-        document.getElementById('kpi-completed').textContent = completed;
-        document.getElementById('kpi-pending').textContent = total - completed;
-
-        // pie
-        const statusCounts = Array(statuses.length).fill(0);
-        allEntries.forEach(e=>{
-          const idx = parseInt(e.querySelector('.task-item .status-badge').dataset.statusIndex);
-          statusCounts[idx]++;
-        });
-        updatePieChart(statusCounts);
-
-        // bar (últimos 7 dias)
-        const activityCounts = Array(7).fill(0);
-        const labels = [];
-        const today = new Date();
-        today.setHours(0,0,0,0);
-        for (let i=6;i>=0;i--){
-          const d = new Date(today);
-          d.setDate(today.getDate()-i);
-          labels.push(d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'}));
-        }
-        allEntries.forEach(e=>{
-          const taskDate = new Date(e.dataset.timestamp);
-          taskDate.setHours(0,0,0,0);
-          const diff = Math.floor((today - taskDate)/(1000*60*60*24));
-          if (diff>=0 && diff<7) activityCounts[6-diff]++;
-        });
-        updateBarChart(labels, activityCounts);
-      }
-
-      function updatePieChart (data) {
-        const ctx = document.getElementById('status-pie-chart').getContext('2d');
-        const isDark = document.documentElement.classList.contains('dark');
-        if (statusPieChart) statusPieChart.destroy();
-        statusPieChart = new Chart(ctx,{
-          type:'pie',
-          data:{ labels:statuses.map(s=>s.name),
-            datasets:[{ data, backgroundColor:statuses.map(s=>s.color), borderColor:isDark?'#374151':'#ffffff', borderWidth:2 }]},
-          options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ color:isDark?'#d1d5db':'#4b5563' }}}}
-        });
-      }
-
-      function updateBarChart (labels, data) {
-        const ctx = document.getElementById('activity-bar-chart').getContext('2d');
-        const isDark = document.documentElement.classList.contains('dark');
-        if (activityBarChart) activityBarChart.destroy();
-        activityBarChart = new Chart(ctx,{
-          type:'bar',
-          data:{ labels, datasets:[{ label:'Tarefas Criadas', data, backgroundColor:'rgba(59,130,246,0.5)', borderColor:'rgba(59,130,246,1)', borderWidth:1 }]},
-          options:{
-            responsive:true,
-            scales:{
-              y:{ beginAtZero:true, ticks:{ color:isDark?'#d1d5db':'#4b5563', stepSize:1 }, grid:{ color:isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)'} },
-              x:{ ticks:{ color:isDark?'#d1d5db':'#4b5563' }, grid:{ display:false } }
-            },
-            plugins:{ legend:{ display:false } }
-          }
-        });
-      }
-
-      // Builders
-      function createTaskElement (taskText, description='Adicionar uma descrição...', statusIdx=0, isCompleted=false, subtasks=[], createdAt=null, statusStartTime=null) {
-        const entry = document.createElement('div');
-        entry.className = 'task-entry';
-        const creationDate = createdAt ? new Date(createdAt) : new Date();
-        const timestamp = creationDate.toLocaleString('pt-BR',{dateStyle:'short', timeStyle:'short'});
-        entry.dataset.timestamp = creationDate.toISOString();
-
-        entry.innerHTML = `
-          <div class="task-item flex items-start bg-gray-50 dark:bg-gray-700/60 p-4 rounded-lg" data-status-start-time="${statusStartTime || creationDate.toISOString()}">
-            <button class="toggle-button w-7 h-7 flex-shrink-0 border-2 border-gray-300 dark:border-gray-500 rounded-full mr-4 mt-1 flex items-center justify-center transition">
-              <i class="fas fa-check text-white text-xs transition-opacity opacity-0"></i>
+    <!-- Contêiner Principal -->
+    <div class="bg-white dark:bg-gray-800 w-full max-w-lg mx-auto rounded-2xl shadow-2xl p-6 md:p-8 transition-colors duration-300 relative">
+        
+        <!-- Botões de Ação Superiores -->
+        <div class="absolute top-5 right-5 flex items-center gap-2 z-10">
+            <button id="api-key-btn" title="Configurar API Key" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
+                <i class="fas fa-key"></i>
             </button>
-            <div class="task-details flex-grow">
-              <div class="flex items-center gap-3">
-                <span class="task-text text-gray-700 dark:text-gray-200"></span>
-                <span class="status-badge cursor-pointer text-xs font-semibold px-2 py-1 rounded-full ${statuses[statusIdx].classes} ${statuses[statusIdx].darkClasses}" data-status-index="${statusIdx}">${statuses[statusIdx].name}</span>
-              </div>
-              <p class="task-description text-sm text-gray-500 dark:text-gray-400 mt-1 cursor-pointer"></p>
-              <form class="description-form hidden w-full mt-1">
-                <input type="text" class="description-input w-full p-1.5 text-sm bg-transparent border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 transition" placeholder="Digite a descrição e pressione Enter...">
-              </form>
-              <div class="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center justify-between">
-                <div class="flex items-center">
-                  <i class="fas fa-calendar-alt mr-1.5"></i>
-                  <span class="timestamp"></span>
+            <button id="download-btn" title="Baixar tarefas" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
+                <i class="fas fa-download"></i>
+            </button>
+            <button id="theme-toggle" title="Alternar tema" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
+                <i id="theme-toggle-dark-icon" class="fas fa-moon hidden"></i>
+                <i id="theme-toggle-light-icon" class="fas fa-sun hidden"></i>
+            </button>
+        </div>
+
+        <!-- Abas -->
+        <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+            <nav id="tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
+                <button data-tab="tasks" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Tarefas
+                </button>
+                 <button data-tab="chat" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">
+                    Chat IA
+                </button>
+                <button data-tab="analysis" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">
+                    Análise
+                </button>
+            </nav>
+        </div>
+
+        <!-- Conteúdo das Abas -->
+        <div id="tab-content">
+            <!-- Aba de Tarefas -->
+            <div id="tasks-view">
+                <!-- Cabeçalho -->
+                <header class="text-center mb-8 pt-12">
+                    <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Minhas Tarefas</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mt-2">Mantenha seu dia organizado e produtivo.</p>
+                </header>
+
+                <!-- Formulário para Adicionar Nova Tarefa -->
+                <form id="task-form" class="flex items-center gap-3 mb-6">
+                    <input 
+                        type="text" 
+                        id="task-input"
+                        placeholder="Ex: Fazer uma caminhada..." 
+                        class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        autocomplete="off">
+                    <button 
+                        type="submit" 
+                        class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </form>
+
+                <!-- Resumo do Status -->
+                <div id="status-summary" class="mb-8 space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg transition-colors duration-300">
+                    <!-- As barras de progresso serão injetadas aqui pelo JS -->
                 </div>
-                <div class="status-timer flex items-center">
-                  <i class="fas fa-stopwatch mr-1.5"></i>
-                  <span>0s</span>
+
+                <!-- Filtros e Pesquisa -->
+                <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
+                    <div class="relative w-full sm:flex-grow">
+                        <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="search-input" placeholder="Pesquisar tarefas..." class="w-full pl-10 p-2.5 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                    </div>
                 </div>
-              </div>
+                <div id="filter-buttons" class="flex items-center gap-2 flex-wrap justify-center mb-6">
+                    <!-- Botões de filtro serão gerados aqui -->
+                </div>
+
+
+                <!-- Lista de Tarefas -->
+                <div id="task-list" class="space-y-4">
+                    <!-- As tarefas serão adicionadas aqui via JavaScript -->
+                </div>
             </div>
-            <div class="task-actions flex items-center gap-2 ml-4">
-              <button class="edit-description-button text-gray-400 hover:text-green-500 dark:hover:text-green-400 transition" title="Editar descrição"><i class="fas fa-pencil-alt"></i></button>
-              <button class="generate-description-btn text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400 transition ${!apiKey ? 'hidden' : ''}" title="✨ Gerar Descrição com IA"><i class="fas fa-wand-magic-sparkles"></i></button>
-              <button class="add-subtask-button text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition" title="Adicionar subtarefa"><i class="fas fa-plus-circle"></i></button>
-              <button class="generate-subtasks-btn text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 transition ${!apiKey ? 'hidden' : ''}" title="✨ Gerar Subtarefas com IA"><i class="fas fa-sitemap"></i></button>
-              <button class="delete-button text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition" title="Excluir tarefa"><i class="fas fa-trash-alt"></i></button>
+            
+            <!-- Aba do Chat -->
+            <div id="chat-view" class="hidden">
+                 <header class="text-center mb-8">
+                    <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Assistente IA</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mt-2">Descreva o que precisa e eu criarei as tarefas para você.</p>
+                </header>
+                <div id="chat-history" class="mb-4 space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <!-- Mensagens do chat aqui -->
+                     <div class="flex justify-start">
+                        <div class="bg-blue-100 dark:bg-blue-900/50 text-gray-800 dark:text-gray-200 p-3 rounded-lg max-w-xs">
+                           Olá! Como posso te ajudar a se organizar hoje?
+                        </div>
+                    </div>
+                </div>
+                <div id="file-preview-area" class="hidden mb-2 p-2 bg-gray-100 dark:bg-gray-600 rounded-md text-sm text-gray-600 dark:text-gray-300 items-center justify-between">
+                    <span id="file-preview-name"></span>
+                    <button id="remove-file-btn" class="text-red-500 hover:text-red-700">&times;</button>
+                </div>
+                <form id="chat-form" class="flex items-center gap-3">
+                    <button type="button" id="attach-file-btn" title="Anexar arquivo" class="text-gray-500 dark:text-gray-400 p-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
+                        <i class="fas fa-paperclip"></i>
+                    </button>
+                    <input type="file" id="chat-file-input" class="hidden" accept=".txt,.md,.text">
+                    <input type="text" id="chat-input" placeholder="Digite sua mensagem..." class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" autocomplete="off">
+                    <button type="submit" class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
             </div>
-          </div>
-          <div class="subtask-section pl-12 pr-4">
-            <div class="subtask-list space-y-2 mt-2"></div>
-            <form class="subtask-form hidden mt-2 flex items-center gap-2">
-              <input type="text" placeholder="Nova subtarefa..." class="subtask-input flex-grow p-2 text-sm bg-transparent border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 transition" autocomplete="off">
-              <button type="submit" class="submit-subtask-button bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-level-down-alt fa-rotate-90"></i></button>
-            </form>
-          </div>
-        `;
 
-        // textContent fill (anti-XSS)
-        entry.querySelector('.task-text').textContent = taskText;
-        entry.querySelector('.task-description').textContent = (description && description.trim()!=='') ? description : 'Adicionar uma descrição...';
-        entry.querySelector('.timestamp').textContent = timestamp;
+            <!-- Aba de Análise -->
+            <div id="analysis-view" class="hidden">
+                 <header class="text-center mb-8">
+                    <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
+                    <p class="text-gray-500 dark:text-gray-400 mt-2">Seu progresso em um piscar de olhos.</p>
+                </header>
+                <!-- KPIs -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-center">
+                        <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total de Tarefas</h4>
+                        <p id="kpi-total" class="text-3xl font-bold text-gray-800 dark:text-gray-100">0</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-center">
+                        <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">Concluídas</h4>
+                        <p id="kpi-completed" class="text-3xl font-bold text-green-500 dark:text-green-400">0</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-center">
+                        <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">Pendentes</h4>
+                        <p id="kpi-pending" class="text-3xl font-bold text-yellow-500 dark:text-yellow-400">0</p>
+                    </div>
+                </div>
 
-        if (isCompleted) setCompletionState(entry.querySelector('.task-item'), true);
-
-        const subtaskList = entry.querySelector('.subtask-list');
-        subtasks.forEach(sub=>{
-          const subEl = createSubtaskElement(sub.text, entry, sub.status, sub.completed, sub.createdAt, sub.statusStartTime);
-          if (subEl) subtaskList.appendChild(subEl);
-        });
-
-        attachTaskEvents(entry);
-        return entry;
-      }
-
-      function createSubtaskElement (subtaskText, parentTaskEntry, statusName='Aberto', isCompleted=false, createdAt=null, statusStartTime=null) {
-        const item = document.createElement('div');
-        item.className = 'subtask-item flex items-start bg-gray-50/50 dark:bg-gray-700/30 p-2 rounded-md';
-        let statusIdx = statuses.findIndex(s=>s.name===statusName);
-        if (statusIdx < 0) statusIdx = 0;
-        const creationDate = createdAt ? new Date(createdAt) : new Date();
-        const timestamp = creationDate.toLocaleString('pt-BR',{dateStyle:'short', timeStyle:'short'});
-        item.dataset.timestamp = creationDate.toISOString();
-        item.dataset.statusStartTime = statusStartTime || creationDate.toISOString();
-
-        item.innerHTML = `
-          <button class="toggle-button w-6 h-6 flex-shrink-0 border-2 border-gray-300 dark:border-gray-500 rounded-full mr-3 mt-1 flex items-center justify-center transition">
-            <i class="fas fa-check text-white text-xs transition-opacity opacity-0"></i>
-          </button>
-          <div class="flex-grow">
-            <div class="flex items-center gap-2">
-              <span class="task-text text-gray-600 dark:text-gray-300 text-sm"></span>
-              <span class="status-badge cursor-pointer text-xs font-semibold px-2 py-1 rounded-full ${statuses[statusIdx].classes} ${statuses[statusIdx].darkClasses}" data-status-index="${statusIdx}">${statuses[statusIdx].name}</span>
+                <!-- Gráficos -->
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">Tarefas por Status</h3>
+                        <canvas id="status-pie-chart"></canvas>
+                    </div>
+                     <div>
+                        <h3 class="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">Atividade nos Últimos 7 Dias</h3>
+                        <canvas id="activity-bar-chart"></canvas>
+                    </div>
+                </div>
             </div>
-            <div class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center justify-between">
-              <div class="flex items-center">
-                <i class="fas fa-calendar-alt mr-1"></i>
-                <span class="timestamp"></span>
-              </div>
-              <div class="status-timer flex items-center">
-                <i class="fas fa-stopwatch mr-1"></i>
-                <span>0s</span>
-              </div>
+        </div>
+
+    </div>
+    
+    <!-- Modal da API Key -->
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md relative">
+            <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">Configurar API Key do Gemini</h3>
+            <div>
+                <label for="api-key-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sua API Key</label>
+                <div class="mt-1">
+                    <input type="password" id="api-key-input" class="block w-full p-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-800 dark:text-gray-200" placeholder="Cole sua chave aqui...">
+                </div>
+                 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Obtenha sua API Key aqui</a>
             </div>
-          </div>
-          <button class="delete-button flex-shrink-0 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition ml-2"><i class="fas fa-times"></i></button>
-        `;
-        item.querySelector('.task-text').textContent = subtaskText;
-        item.querySelector('.timestamp').textContent = timestamp;
+            <div class="mt-5 sm:mt-6">
+                <button id="save-api-key-btn" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
 
-        if (isCompleted) setCompletionState(item, true);
 
-        item.querySelector('.delete-button').addEventListener('click', () => {
-          item.classList.add('opacity-0','scale-90');
-          setTimeout(()=>{ item.remove(); syncParentStatus(parentTaskEntry); saveTasks(); }, 300);
-        });
-        item.querySelector('.toggle-button').addEventListener('click', ()=> toggleTaskCompletion(item, parentTaskEntry));
-        item.querySelector('.status-badge').addEventListener('click', (e)=>{
-          let idx = parseInt(e.target.dataset.statusIndex);
-          let next = (idx + 1) % statuses.length;
-          changeStatus(item, next, parentTaskEntry);
-        });
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // ===================================================================
+            // VARIÁVEIS GLOBAIS E CONSTANTES
+            // ===================================================================
+            const taskForm = document.getElementById('task-form');
+            const taskInput = document.getElementById('task-input');
+            const taskList = document.getElementById('task-list');
+            const searchInput = document.getElementById('search-input');
+            const filterButtonsContainer = document.getElementById('filter-buttons');
+            let apiKey = localStorage.getItem('gemini-api-key') || ""; 
+            let activeFilter = 'Todos';
+            let attachedFileContent = null;
 
-        return item;
-      }
 
-      // IA
-      async function callGeminiAPI (systemPrompt, userQuery, button) {
-        if (!apiKey) { alert("Por favor, configure sua API Key do Gemini primeiro."); return null; }
-        const icon = button.querySelector('i');
-        icon.classList.add('fa-spin'); button.disabled = true;
+            const statuses = [
+                { name: 'Aberto', classes: 'bg-blue-100 text-blue-800', darkClasses: 'dark:bg-blue-900/50 dark:text-blue-300', color: '#3b82f6' },
+                { name: 'Em Andamento', classes: 'bg-yellow-100 text-yellow-800', darkClasses: 'dark:bg-yellow-900/50 dark:text-yellow-300', color: '#f59e0b'},
+                { name: 'Desenvolvido', classes: 'bg-purple-100 text-purple-800', darkClasses: 'dark:bg-purple-900/50 dark:text-purple-300', color: '#8b5cf6' },
+                { name: 'Teste', classes: 'bg-indigo-100 text-indigo-800', darkClasses: 'dark:bg-indigo-900/50 dark:text-indigo-300', color: '#6366f1' },
+                { name: 'Finalizado', classes: 'bg-green-100 text-green-800', darkClasses: 'dark:bg-green-900/50 dark:text-green-300', color: '#22c55e' }
+            ];
+            const finalizadoIndex = 4;
+            const emAndamentoIndex = 1;
+            
+            let statusPieChart = null;
+            let activityBarChart = null;
 
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-        const payload = {
-          contents: [{ parts: [{ text: userQuery }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          tools:[{ functionDeclarations:[{
-            name: "createTask",
-            description: "Cria uma nova tarefa principal com descrição e subtarefas.",
-            parameters: {
-              type: "OBJECT",
-              properties: {
-                taskText: { type: "STRING" },
-                description: { type: "STRING" },
-                subtasks: { type: "ARRAY", items: { type: "STRING" } }
-              },
-              required: ["taskText"]
+            // ===================================================================
+            // DECLARAÇÃO DE TODAS AS FUNÇÕES
+            // ===================================================================
+
+            function initializeStatusSummary() {
+                const summaryContainer = document.getElementById('status-summary');
+                if (!summaryContainer) return;
+                summaryContainer.innerHTML = statuses.map((status, index) => `
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-sm font-medium text-gray-600 dark:text-gray-300">${status.name}</span>
+                            <span id="status-percent-${index}" class="text-sm font-medium text-gray-500 dark:text-gray-400">0 (0%)</span>
+                        </div>
+                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                            <div id="status-bar-${index}" class="h-2.5 rounded-full transition-all duration-500" style="width: 0%; background-color: ${status.color}"></div>
+                        </div>
+                    </div>
+                `).join('');
             }
-          }]}]
-        };
 
-        try {
-          const resp = await fetch(apiUrl,{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
-          if (!resp.ok) throw new Error(`API Error: ${resp.statusText}`);
-          const result = await resp.json();
-          return result.candidates?.[0];
-        } catch (e) {
-          console.error("Erro na chamada da API Gemini:", e);
-          return null;
-        } finally {
-          icon.classList.remove('fa-spin'); button.disabled = false;
-        }
-      }
+            function updateStatusSummary() {
+                const allTasks = document.querySelectorAll('.task-item');
+                const totalTasks = allTasks.length;
+                const counts = Array(statuses.length).fill(0);
 
-      function handleCreateTask (args) {
-        const { taskText, description, subtasks } = args;
-        if (!taskText) return "Não foi possível criar a tarefa. O título está faltando.";
-        const subs = subtasks ? subtasks.map(st=>({ text: st, status:'Aberto', completed:false, createdAt:new Date().toISOString() })) : [];
-        const newTask = createTaskElement(taskText, description, 0, false, subs, new Date().toISOString());
-        taskList.prepend(newTask);
-        saveTasks();
-        updateStatusSummary();
-        updateDashboard();
-        return `Tarefa "${taskText}" criada com ${subs.length} subtarefas.`;
-      }
+                allTasks.forEach(task => {
+                    const statusBadge = task.querySelector('.status-badge');
+                    if (statusBadge) {
+                        const statusIndex = parseInt(statusBadge.dataset.statusIndex);
+                        counts[statusIndex]++;
+                    }
+                });
 
-      async function sendChatMessage () {
-        const chatInput = document.getElementById('chat-input');
-        const userMessage = chatInput.value.trim();
-        if (!userMessage) return;
-        if (!apiKey) { alert("Por favor, configure sua API Key do Gemini para usar o chat."); return; }
+                counts.forEach((count, index) => {
+                    const percentage = totalTasks > 0 ? ((count / totalTasks) * 100).toFixed(0) : 0;
+                    const percentEl = document.getElementById(`status-percent-${index}`);
+                    const barEl = document.getElementById(`status-bar-${index}`);
+                    if (percentEl && barEl) {
+                        percentEl.textContent = `${count} (${percentage}%)`;
+                        barEl.style.width = `${percentage}%`;
+                    }
+                });
+            }
+            
+            function updateDashboard() {
+                const allTasks = document.querySelectorAll('.task-entry');
+                const totalTasks = allTasks.length;
+                const completedTasks = document.querySelectorAll('.task-item.completed').length;
+                
+                document.getElementById('kpi-total').textContent = totalTasks;
+                document.getElementById('kpi-completed').textContent = completedTasks;
+                document.getElementById('kpi-pending').textContent = totalTasks - completedTasks;
+                
+                const statusCounts = Array(statuses.length).fill(0);
+                allTasks.forEach(entry => {
+                    const statusIndex = parseInt(entry.querySelector('.task-item .status-badge').dataset.statusIndex);
+                    statusCounts[statusIndex]++;
+                });
+                updatePieChart(statusCounts);
 
-        appendMessage(userMessage,'user');
-        chatInput.value = '';
-        appendMessage("...",'model',true);
+                const activityCounts = Array(7).fill(0);
+                const labels = [];
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
 
-        const systemPrompt = "Você é um assistente de produtividade. Se o usuário pedir para criar uma tarefa, use a ferramenta `createTask`. Caso contrário, responda de forma útil e amigável.";
-        const first = await callGeminiAPI(systemPrompt, userMessage, document.querySelector('#chat-form button'));
-        const part = first?.content?.parts?.[0];
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date(today);
+                    date.setDate(today.getDate() - i);
+                    labels.push(date.toLocaleDateString('pt-BR', {day: '2-digit', month: 'short'}));
+                }
+                
+                allTasks.forEach(entry => {
+                    const taskDate = new Date(entry.dataset.timestamp);
+                    taskDate.setHours(0,0,0,0);
+                    const diffDays = Math.floor((today - taskDate) / (1000 * 60 * 60 * 24));
+                    if (diffDays >= 0 && diffDays < 7) {
+                        activityCounts[6 - diffDays]++;
+                    }
+                });
 
-        if (part && part.functionCall) {
-          const { name, args } = part.functionCall;
-          if (name === 'createTask') {
-            const functionResult = handleCreateTask(args);
-            const secondPayload = {
-              contents: [
-                { role:"user", parts:[{ text: userMessage }] },
-                { role:"model", parts:[part] },
-                { role:"function", parts:[{ functionResponse: { name:"createTask", response:{ result:functionResult } } }] }
-              ]
-            };
-            const finalResp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
-              method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(secondPayload)
+                updateBarChart(labels, activityCounts);
+            }
+
+            function updatePieChart(data) {
+                const ctx = document.getElementById('status-pie-chart').getContext('2d');
+                const isDark = document.documentElement.classList.contains('dark');
+                if(statusPieChart) {
+                    statusPieChart.destroy();
+                }
+                statusPieChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: statuses.map(s => s.name),
+                        datasets: [{
+                            label: 'Tarefas por Status',
+                            data: data,
+                            backgroundColor: statuses.map(s => s.color),
+                            borderColor: isDark ? '#374151' : '#ffffff',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: isDark ? '#d1d5db' : '#4b5563'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function updateBarChart(labels, data) {
+                const ctx = document.getElementById('activity-bar-chart').getContext('2d');
+                const isDark = document.documentElement.classList.contains('dark');
+                 if(activityBarChart) {
+                    activityBarChart.destroy();
+                }
+                activityBarChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Tarefas Criadas',
+                            data: data,
+                            backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                            borderColor: 'rgba(59, 130, 246, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                         scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: isDark ? '#d1d5db' : '#4b5563',
+                                    stepSize: 1
+                                },
+                                 grid: {
+                                    color: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                                }
+                            },
+                            x: {
+                                 ticks: {
+                                    color: isDark ? '#d1d5db' : '#4b5563'
+                                },
+                                 grid: {
+                                    display: false
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                               display: false
+                            }
+                        }
+                    }
+                });
+            }
+
+            function createTaskElement(taskText, description = 'Adicionar uma descrição...', statusIdx = 0, isCompleted = false, subtasks = [], createdAt = null, statusStartTime = null) {
+                const taskEntry = document.createElement('div');
+                taskEntry.className = 'task-entry';
+                const creationDate = createdAt ? new Date(createdAt) : new Date();
+                const timestamp = creationDate.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                
+                taskEntry.dataset.timestamp = creationDate.toISOString();
+
+                taskEntry.innerHTML = `
+                    <div class="task-item flex items-start bg-gray-50 dark:bg-gray-700/60 p-4 rounded-lg" data-status-start-time="${statusStartTime || creationDate.toISOString()}">
+                        <button class="toggle-button w-7 h-7 flex-shrink-0 border-2 border-gray-300 dark:border-gray-500 rounded-full mr-4 mt-1 flex items-center justify-center transition">
+                            <i class="fas fa-check text-white text-xs transition-opacity opacity-0"></i>
+                        </button>
+                        <div class="task-details flex-grow">
+                            <div class="flex items-center gap-3">
+                                <span class="task-text text-gray-700 dark:text-gray-200">${taskText}</span>
+                                <span class="status-badge cursor-pointer text-xs font-semibold px-2 py-1 rounded-full ${statuses[statusIdx].classes} ${statuses[statusIdx].darkClasses}" data-status-index="${statusIdx}">${statuses[statusIdx].name}</span>
+                            </div>
+                            <p class="task-description text-sm text-gray-500 dark:text-gray-400 mt-1 cursor-pointer">${description}</p>
+                            <form class="description-form hidden w-full mt-1">
+                                <input type="text" class="description-input w-full p-1.5 text-sm bg-transparent border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 transition" placeholder="Digite a descrição e pressione Enter...">
+                            </form>
+                            <div class="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center justify-between">
+                                <div class="flex items-center">
+                                   <i class="fas fa-calendar-alt mr-1.5"></i>
+                                   <span class="timestamp">${timestamp}</span>
+                                </div>
+                                <div class="status-timer flex items-center">
+                                    <i class="fas fa-stopwatch mr-1.5"></i>
+                                    <span>0s</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="task-actions flex items-center gap-2 ml-4">
+                            <button class="edit-description-button text-gray-400 hover:text-green-500 dark:hover:text-green-400 transition" title="Editar descrição"><i class="fas fa-pencil-alt"></i></button>
+                            <button class="generate-description-btn text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400 transition ${!apiKey ? 'hidden' : ''}" title="✨ Gerar Descrição com IA"><i class="fas fa-wand-magic-sparkles"></i></button>
+                            <button class="add-subtask-button text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition" title="Adicionar subtarefa"><i class="fas fa-plus-circle"></i></button>
+                            <button class="generate-subtasks-btn text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 transition ${!apiKey ? 'hidden' : ''}" title="✨ Gerar Subtarefas com IA"><i class="fas fa-sitemap"></i></button>
+                            <button class="delete-button text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition" title="Excluir tarefa"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                    <div class="subtask-section pl-12 pr-4">
+                        <div class="subtask-list space-y-2 mt-2"></div>
+                        <form class="subtask-form hidden mt-2 flex items-center gap-2">
+                            <input type="text" placeholder="Nova subtarefa..." class="subtask-input flex-grow p-2 text-sm bg-transparent border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 transition" autocomplete="off">
+                            <button type="submit" class="submit-subtask-button bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-level-down-alt fa-rotate-90"></i></button>
+                        </form>
+                    </div>
+                `;
+                
+                if (isCompleted) {
+                    setCompletionState(taskEntry.querySelector('.task-item'), true);
+                }
+
+                const subtaskList = taskEntry.querySelector('.subtask-list');
+                subtasks.forEach(sub => {
+                    const subtaskEl = createSubtaskElement(sub.text, taskEntry, sub.status, sub.completed, sub.createdAt, sub.statusStartTime);
+                    if (subtaskEl) subtaskList.appendChild(subtaskEl);
+                });
+
+                attachTaskEvents(taskEntry);
+                return taskEntry;
+            }
+
+            function createSubtaskElement(subtaskText, parentTaskEntry, statusName = 'Aberto', isCompleted = false, createdAt = null, statusStartTime = null) {
+                const subtaskItem = document.createElement('div');
+                subtaskItem.className = 'subtask-item flex items-start bg-gray-50/50 dark:bg-gray-700/30 p-2 rounded-md';
+                let statusIdx = statuses.findIndex(s => s.name === statusName);
+                if (statusIdx < 0) statusIdx = 0;
+                const creationDate = createdAt ? new Date(createdAt) : new Date();
+                const timestamp = creationDate.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+                
+                subtaskItem.dataset.timestamp = creationDate.toISOString();
+                subtaskItem.dataset.statusStartTime = statusStartTime || creationDate.toISOString();
+
+
+                subtaskItem.innerHTML = `
+                    <button class="toggle-button w-6 h-6 flex-shrink-0 border-2 border-gray-300 dark:border-gray-500 rounded-full mr-3 mt-1 flex items-center justify-center transition">
+                        <i class="fas fa-check text-white text-xs transition-opacity opacity-0"></i>
+                    </button>
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-2">
+                            <span class="task-text text-gray-600 dark:text-gray-300 text-sm">${subtaskText}</span>
+                            <span class="status-badge cursor-pointer text-xs font-semibold px-2 py-1 rounded-full ${statuses[statusIdx].classes} ${statuses[statusIdx].darkClasses}" data-status-index="${statusIdx}">${statuses[statusIdx].name}</span>
+                        </div>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center justify-between">
+                            <div class="flex items-center">
+                               <i class="fas fa-calendar-alt mr-1"></i>
+                               <span class="timestamp">${timestamp}</span>
+                            </div>
+                            <div class="status-timer flex items-center">
+                               <i class="fas fa-stopwatch mr-1"></i>
+                               <span>0s</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="delete-button flex-shrink-0 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition ml-2"><i class="fas fa-times"></i></button>
+                `;
+
+                if (isCompleted) {
+                    setCompletionState(subtaskItem, true);
+                }
+
+                subtaskItem.querySelector('.delete-button').addEventListener('click', () => {
+                    subtaskItem.classList.add('opacity-0', 'scale-90');
+                    setTimeout(() => {
+                        subtaskItem.remove();
+                        syncParentStatus(parentTaskEntry);
+                        saveTasks();
+                    }, 300);
+                });
+
+                subtaskItem.querySelector('.toggle-button').addEventListener('click', () => {
+                    toggleTaskCompletion(subtaskItem, parentTaskEntry);
+                });
+                
+                subtaskItem.querySelector('.status-badge').addEventListener('click', (e) => {
+                    let currentIndex = parseInt(e.target.dataset.statusIndex);
+                    let nextIndex = (currentIndex + 1) % statuses.length;
+                    changeStatus(subtaskItem, nextIndex, parentTaskEntry);
+                });
+
+                return subtaskItem;
+            }
+            
+            async function callGeminiAPI(systemPrompt, userQuery, button) {
+                if (!apiKey) {
+                    console.error("API Key não configurada.");
+                    alert("Por favor, configure sua API Key do Gemini primeiro.");
+                    return null;
+                }
+                const icon = button.querySelector('i');
+                icon.classList.add('fa-spin');
+                button.disabled = true;
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    tools: [{
+                        functionDeclarations: [{
+                            name: "createTask",
+                            description: "Cria uma nova tarefa principal com uma descrição e uma lista de subtarefas. Use isso quando o usuário pedir para criar, adicionar ou organizar uma nova tarefa ou projeto.",
+                            parameters: {
+                                type: "OBJECT",
+                                properties: {
+                                    taskText: { type: "STRING", description: "O título principal da tarefa. Ex: 'Organizar festa de aniversário'" },
+                                    description: { type: "STRING", description: "Uma descrição mais detalhada da tarefa principal. Ex: 'Festa surpresa para o João no próximo sábado.'" },
+                                    subtasks: { type: "ARRAY", description: "Uma lista de strings, onde cada string é uma subtarefa. Ex: ['Reservar o local', 'Enviar convites']", items: { type: "STRING" } }
+                                },
+                                required: ["taskText"]
+                            }
+                        }]
+                    }]
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`API Error: ${response.statusText}`);
+                    }
+
+                    const result = await response.json();
+                    return result.candidates?.[0];
+                } catch (error) {
+                    console.error("Erro na chamada da API Gemini:", error);
+                    return null;
+                } finally {
+                    icon.classList.remove('fa-spin');
+                    button.disabled = false;
+                }
+            }
+            
+            function handleCreateTask(args) {
+                const { taskText, description, subtasks } = args;
+                if (!taskText) return "Não foi possível criar a tarefa. O título está faltando.";
+                
+                const subtaskObjects = subtasks ? subtasks.map(st => ({ text: st, status: "Aberto", completed: false, createdAt: new Date().toISOString() })) : [];
+                const newTask = createTaskElement(taskText, description, 0, false, subtaskObjects, new Date().toISOString());
+                taskList.prepend(newTask);
+                saveTasks();
+                updateStatusSummary();
+                updateDashboard();
+
+                return `Tarefa "${taskText}" criada com ${subtaskObjects.length} subtarefas.`;
+            }
+
+
+            async function sendChatMessage() {
+                const chatInput = document.getElementById('chat-input');
+                const chatHistory = document.getElementById('chat-history');
+                const userMessage = chatInput.value.trim();
+                const fullMessage = attachedFileContent ? `${userMessage}\n\n---\n\n${attachedFileContent}` : userMessage;
+
+                if (!fullMessage) return;
+                
+                if (!apiKey) {
+                    alert("Por favor, configure sua API Key do Gemini para usar o chat.");
+                    return;
+                }
+
+                appendMessage(userMessage, 'user');
+                chatInput.value = '';
+                resetFileAttachment();
+                appendMessage("...", 'model', true); // Typing indicator
+
+                const systemPrompt = "Você é um assistente de produtividade. Sua função é ajudar o usuário a gerenciar sua lista de tarefas. Se o usuário pedir para criar uma tarefa (potencialmente com base em um conteúdo de arquivo anexado), use a ferramenta `createTask`. Para outras perguntas, responda de forma útil e amigável.";
+                const userQuery = fullMessage;
+                
+                let firstResponse = await callGeminiAPI(systemPrompt, userQuery, document.querySelector('#chat-form button'));
+                
+                const firstResponsePart = firstResponse?.content?.parts?.[0];
+                
+                if (firstResponsePart && firstResponsePart.functionCall) {
+                    const { name, args } = firstResponsePart.functionCall;
+                    if (name === 'createTask') {
+                        const functionResult = handleCreateTask(args);
+
+                        const secondPayload = {
+                             contents: [
+                                { role: "user", parts: [{ text: userQuery }] },
+                                { role: "model", parts: [firstResponsePart] },
+                                { role: "function", parts: [{ functionResponse: { name: "createTask", response: { result: functionResult } } }] }
+                            ]
+                        };
+
+                        const finalApiResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(secondPayload)
+                        });
+                        const finalResult = await finalApiResponse.json();
+                        const finalText = finalResult.candidates?.[0]?.content?.parts?.[0]?.text;
+                        
+                        updateMessage(finalText || "Tarefa criada com sucesso!");
+                    }
+                } else {
+                    updateMessage(firstResponsePart?.text || "Desculpe, não consegui processar seu pedido.");
+                }
+            }
+            
+            function appendMessage(text, role, isLoading = false) {
+                const chatHistory = document.getElementById('chat-history');
+                const messageWrapper = document.createElement('div');
+                const messageBubble = document.createElement('div');
+                
+                messageWrapper.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
+                messageBubble.className = role === 'user' 
+                    ? 'bg-blue-500 text-white p-3 rounded-lg max-w-sm' 
+                    : 'bg-blue-100 dark:bg-blue-900/50 text-gray-800 dark:text-gray-200 p-3 rounded-lg max-w-sm';
+
+                if (isLoading) {
+                    messageBubble.id = 'loading-bubble';
+                    messageBubble.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+                } else {
+                    messageBubble.textContent = text;
+                }
+
+                messageWrapper.appendChild(messageBubble);
+                chatHistory.appendChild(messageWrapper);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+
+            function updateMessage(text) {
+                const loadingBubble = document.getElementById('loading-bubble');
+                if (loadingBubble) {
+                    loadingBubble.textContent = text;
+                    loadingBubble.removeAttribute('id');
+                }
+            }
+
+            function resetFileAttachment() {
+                attachedFileContent = null;
+                document.getElementById('chat-file-input').value = "";
+                const preview = document.getElementById('file-preview-area');
+                preview.classList.add('hidden');
+                preview.querySelector('#file-preview-name').textContent = '';
+            }
+
+
+            function setCompletionState(item, isCompleted) {
+                 const toggleButton = item.querySelector('.toggle-button');
+                 const checkIcon = toggleButton.querySelector('.fa-check');
+
+                if (isCompleted) {
+                    item.classList.add('completed');
+                    toggleButton.classList.add('bg-green-500', 'border-green-500', 'dark:bg-green-600', 'dark:border-green-600');
+                    checkIcon.classList.add('opacity-100');
+                } else {
+                    item.classList.remove('completed');
+                    toggleButton.classList.remove('bg-green-500', 'border-green-500', 'dark:bg-green-600', 'dark:border-green-600');
+                    checkIcon.classList.remove('opacity-100');
+                }
+            }
+            
+            function syncParentStatus(taskEntry) {
+                const subtasks = taskEntry.querySelectorAll('.subtask-item');
+                const parentTaskItem = taskEntry.querySelector('.task-item');
+                const parentStatusBadge = parentTaskItem.querySelector('.status-badge');
+
+                if (subtasks.length === 0) {
+                    parentStatusBadge.classList.add('cursor-pointer');
+                    updateStatusSummary();
+                    return;
+                }
+
+                parentStatusBadge.classList.remove('cursor-pointer');
+                const firstStatusIndex = parseInt(subtasks[0].querySelector('.status-badge').dataset.statusIndex);
+                const allSame = [...subtasks].every(st => parseInt(st.querySelector('.status-badge').dataset.statusIndex) === firstStatusIndex);
+
+                if (allSame) {
+                    changeStatus(parentTaskItem, firstStatusIndex);
+                } else {
+                    changeStatus(parentTaskItem, emAndamentoIndex);
+                }
+            }
+            
+            function changeStatus(item, newIndex, parentTaskEntry = null) {
+                const statusBadge = item.querySelector('.status-badge');
+                const status = statuses[newIndex];
+                
+                item.dataset.statusStartTime = new Date().toISOString(); 
+
+                statusBadge.textContent = status.name;
+                statusBadge.className = `status-badge text-xs font-semibold px-2 py-1 rounded-full ${status.classes} ${status.darkClasses}`;
+                 if(item.classList.contains('task-item') || item.classList.contains('subtask-item')) {
+                     statusBadge.classList.add('cursor-pointer');
+                 }
+                statusBadge.dataset.statusIndex = newIndex;
+
+                setCompletionState(item, newIndex === finalizadoIndex);
+
+                if(item.classList.contains('subtask-item') && parentTaskEntry) {
+                    syncParentStatus(parentTaskEntry);
+                } else {
+                    updateStatusSummary();
+                }
+                saveTasks();
+                setTimeout(applyFiltersAndSearch, 0);
+                setTimeout(updateDashboard, 0);
+            }
+
+            function toggleTaskCompletion(item, parentTaskEntry = null) {
+                const isMainTask = item.classList.contains('task-item');
+                if(isMainTask) {
+                    const isCompleted = item.classList.contains('completed');
+                    const newStatusIndex = !isCompleted ? finalizadoIndex : 0;
+                    
+                    changeStatus(item, newStatusIndex);
+                    
+                    const subtasks = item.closest('.task-entry').querySelectorAll('.subtask-item');
+                    subtasks.forEach(subtask => {
+                        changeStatus(subtask, newStatusIndex, item.closest('.task-entry'));
+                    });
+
+                } else {
+                    const isCompleted = item.classList.contains('completed');
+                    const newStatusIndex = !isCompleted ? finalizadoIndex : 0;
+                    changeStatus(item, newStatusIndex, parentTaskEntry);
+                }
+            }
+            
+            function attachTaskEvents(taskEntry) {
+                const taskItem = taskEntry.querySelector('.task-item');
+                const deleteButton = taskEntry.querySelector('.delete-button');
+                const toggleButton = taskEntry.querySelector('.toggle-button');
+                const addSubtaskButton = taskEntry.querySelector('.add-subtask-button');
+                const subtaskForm = taskEntry.querySelector('.subtask-form');
+                const subtaskInput = taskEntry.querySelector('.subtask-input');
+                const subtaskList = taskEntry.querySelector('.subtask-list');
+                
+                const editDescriptionButton = taskEntry.querySelector('.edit-description-button');
+                const taskDescription = taskEntry.querySelector('.task-description');
+                const descriptionForm = taskEntry.querySelector('.description-form');
+                const descriptionInput = taskEntry.querySelector('.description-input');
+                
+                const statusBadge = taskEntry.querySelector('.status-badge');
+                const generateSubtasksBtn = taskEntry.querySelector('.generate-subtasks-btn');
+                const generateDescriptionBtn = taskEntry.querySelector('.generate-description-btn');
+
+                if (generateSubtasksBtn) {
+                    generateSubtasksBtn.addEventListener('click', () => generateSubtasks(taskEntry));
+                }
+                if (generateDescriptionBtn) {
+                    generateDescriptionBtn.addEventListener('click', () => generateDescription(taskEntry));
+                }
+
+
+                deleteButton.addEventListener('click', () => {
+                    taskEntry.classList.add('opacity-0', 'scale-90');
+                    setTimeout(() => {
+                        taskEntry.remove();
+                        updateStatusSummary();
+                        updateDashboard();
+                        saveTasks();
+                    }, 300);
+                });
+                
+                toggleButton.addEventListener('click', () => {
+                    toggleTaskCompletion(taskItem);
+                });
+
+                statusBadge.addEventListener('click', () => {
+                    if (subtaskList.children.length > 0) return;
+                    let currentIndex = parseInt(statusBadge.dataset.statusIndex);
+                    let nextIndex = (currentIndex + 1) % statuses.length;
+                    changeStatus(taskItem, nextIndex);
+                });
+
+                function handleDescriptionEdit() {
+                    taskDescription.classList.toggle('hidden');
+                    descriptionForm.classList.toggle('hidden');
+                    if (!descriptionForm.classList.contains('hidden')) {
+                        descriptionInput.value = taskDescription.textContent === 'Adicionar uma descrição...' ? '' : taskDescription.textContent;
+                        descriptionInput.focus();
+                    }
+                }
+
+                editDescriptionButton.addEventListener('click', handleDescriptionEdit);
+                taskDescription.addEventListener('click', handleDescriptionEdit);
+
+                descriptionForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const newDescription = descriptionInput.value.trim();
+                    taskDescription.textContent = newDescription === '' ? 'Adicionar uma descrição...' : newDescription;
+                    handleDescriptionEdit();
+                    saveTasks();
+                });
+
+                addSubtaskButton.addEventListener('click', () => {
+                    subtaskForm.classList.toggle('hidden');
+                    subtaskInput.focus();
+                });
+
+                subtaskForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const subtaskText = subtaskInput.value.trim();
+                    if (subtaskText) {
+                        const newSubtask = createSubtaskElement(subtaskText, taskEntry);
+                        subtaskList.appendChild(newSubtask);
+                        subtaskInput.value = '';
+                        syncParentStatus(taskEntry);
+                        saveTasks();
+                    }
+                });
+            }
+            
+            function applyFiltersAndSearch() {
+                const searchTerm = searchInput.value.toLowerCase();
+                document.querySelectorAll('.task-entry').forEach(taskEntry => {
+                    const taskText = taskEntry.querySelector('.task-item .task-text').textContent.toLowerCase();
+                    const taskDesc = taskEntry.querySelector('.task-item .task-description').textContent.toLowerCase();
+                    const taskStatus = taskEntry.querySelector('.task-item .status-badge').textContent;
+
+                    const searchMatch = taskText.includes(searchTerm) || taskDesc.includes(searchTerm);
+                    const filterMatch = activeFilter === 'Todos' || taskStatus === activeFilter;
+
+                    if (searchMatch && filterMatch) {
+                        taskEntry.style.display = '';
+                    } else {
+                        taskEntry.style.display = 'none';
+                    }
+                });
+            }
+            
+            function initializeFilters() {
+                let buttonsHTML = `<button data-filter="Todos" class="filter-btn active px-3 py-1 text-sm font-medium rounded-md bg-blue-600 text-white dark:bg-blue-600 transition">Todos</button>`;
+                statuses.forEach(status => {
+                    buttonsHTML += `<button data-filter="${status.name}" class="filter-btn px-3 py-1 text-sm font-medium rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 transition">${status.name}</button>`;
+                });
+                filterButtonsContainer.innerHTML = buttonsHTML;
+            }
+
+            function applyTheme() {
+                const isDark = localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                document.documentElement.classList.toggle('dark', isDark);
+                document.getElementById('theme-toggle-light-icon').classList.toggle('hidden', !isDark);
+                document.getElementById('theme-toggle-dark-icon').classList.toggle('hidden', isDark);
+
+                if(statusPieChart || activityBarChart) {
+                    setTimeout(updateDashboard, 50);
+                }
+            }
+            
+            function updateAIVisibility() {
+                const aiButtons = document.querySelectorAll('.generate-description-btn, .generate-subtasks-btn');
+                if (apiKey) {
+                    aiButtons.forEach(btn => btn.classList.remove('hidden'));
+                } else {
+                    aiButtons.forEach(btn => btn.classList.add('hidden'));
+                }
+            }
+
+            function formatDuration(milliseconds) {
+                if (milliseconds < 0) milliseconds = 0;
+
+                let seconds = Math.floor(milliseconds / 1000);
+                let minutes = Math.floor(seconds / 60);
+                let hours = Math.floor(minutes / 60);
+                let days = Math.floor(hours / 24);
+
+                seconds %= 60;
+                minutes %= 60;
+                hours %= 24;
+
+                let result = "";
+                if (days > 0) result += `${days}d `;
+                if (hours > 0) result += `${hours}h `;
+                if (minutes > 0) result += `${minutes}m `;
+                result += `${seconds}s`;
+
+                return result.trim();
+            }
+
+            function startTimers() {
+                setInterval(() => {
+                    document.querySelectorAll('.task-item, .subtask-item').forEach(item => {
+                        const timerSpan = item.querySelector('.status-timer span');
+                        if (timerSpan) {
+                            const startTime = new Date(item.dataset.statusStartTime);
+                            const elapsed = new Date() - startTime;
+                            timerSpan.textContent = formatDuration(elapsed);
+                        }
+                    });
+                }, 1000);
+            }
+
+            function saveTasks() {
+                const tasksData = [];
+                document.querySelectorAll('.task-entry').forEach(taskEntry => {
+                    const taskItem = taskEntry.querySelector('.task-item');
+                    const taskText = taskItem.querySelector('.task-text').textContent;
+                    let description = taskItem.querySelector('.task-description').textContent;
+                    if (description === 'Adicionar uma descrição...') description = '';
+                    
+                    const statusIndex = parseInt(taskItem.querySelector('.status-badge').dataset.statusIndex);
+                    const statusName = statuses[statusIndex].name;
+                    const completed = taskItem.classList.contains('completed');
+                    const createdAt = new Date(taskEntry.dataset.timestamp).toISOString();
+                    const statusStartTime = new Date(taskItem.dataset.statusStartTime).toISOString();
+
+                    const subtasksData = [];
+                    taskEntry.querySelectorAll('.subtask-item').forEach(subtaskItem => {
+                        const subtaskText = subtaskItem.querySelector('.task-text').textContent;
+                        const subtaskStatusIndex = parseInt(subtaskItem.querySelector('.status-badge').dataset.statusIndex);
+                        const subtaskStatusName = statuses[subtaskStatusIndex].name;
+                        const subtaskCompleted = subtaskItem.classList.contains('completed');
+                        const subtaskCreatedAt = new Date(subtaskItem.dataset.timestamp).toISOString();
+                        const subtaskStatusStartTime = new Date(subtaskItem.dataset.statusStartTime).toISOString();
+
+                        subtasksData.push({
+                            text: subtaskText,
+                            status: subtaskStatusName,
+                            completed: subtaskCompleted,
+                            createdAt: subtaskCreatedAt,
+                            statusStartTime: subtaskStatusStartTime
+                        });
+                    });
+                    
+                    tasksData.push({
+                        text: taskText,
+                        description: description,
+                        status: statusName,
+                        completed: completed,
+                        createdAt: createdAt,
+                        statusStartTime: statusStartTime,
+                        subtasks: subtasksData
+                    });
+                });
+                localStorage.setItem('tasks-data', JSON.stringify(tasksData));
+            }
+
+            function loadTasks() {
+                const savedTasks = localStorage.getItem('tasks-data');
+                if (savedTasks) {
+                    const tasksData = JSON.parse(savedTasks);
+                    tasksData.forEach(taskData => {
+                        const statusIndex = statuses.findIndex(s => s.name === taskData.status) || 0;
+                        const taskEl = createTaskElement(
+                            taskData.text,
+                            taskData.description || 'Adicionar uma descrição...',
+                            statusIndex,
+                            taskData.completed,
+                            taskData.subtasks,
+                            taskData.createdAt,
+                            taskData.statusStartTime
+                        );
+                        taskList.appendChild(taskEl);
+                    });
+                } else {
+                     const task1 = createTaskElement(
+                        "Reunião de equipe", 
+                        "Discutir os resultados do último trimestre.", 
+                        emAndamentoIndex,
+                        false,
+                        [{text: "Preparar apresentação", status: "Aberto", completed: false, createdAt: new Date().toISOString()}],
+                         new Date().toISOString()
+                     );
+                     if (task1) taskList.appendChild(task1);
+
+                     const task2 = createTaskElement("Enviar relatório mensal", "Adicionar uma descrição...", finalizadoIndex, true, [], new Date(new Date().setDate(new Date().getDate() - 2)).toISOString());
+                     if (task2) taskList.appendChild(task2);
+                }
+            }
+            
+            // ===================================================================
+            // EVENT LISTENERS E INICIALIZAÇÃO
+            // ===================================================================
+
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const taskText = taskInput.value.trim();
+                
+                if (taskText !== '') {
+                    const newTask = createTaskElement(taskText);
+                    taskList.prepend(newTask);
+                    taskInput.value = '';
+                    taskInput.focus();
+                    updateStatusSummary();
+                    applyFiltersAndSearch();
+                    saveTasks();
+                }
             });
-            const finalJson = await finalResp.json();
-            const finalText = finalJson.candidates?.[0]?.content?.parts?.[0]?.text;
-            updateMessage(finalText || "Tarefa criada com sucesso!");
-          }
-        } else {
-          updateMessage(part?.text || "Desculpe, não consegui processar seu pedido.");
-        }
-      }
+            
+            document.getElementById('theme-toggle').addEventListener('click', function() {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+                applyTheme();
+            });
 
-      function appendMessage (text, role, isLoading=false) {
-        const chatHistory = document.getElementById('chat-history');
-        const wrap = document.createElement('div');
-        const bubble = document.createElement('div');
-        wrap.className = role==='user' ? 'flex justify-end' : 'flex justify-start';
-        bubble.className = role==='user'
-          ? 'bg-blue-500 text-white p-3 rounded-lg max-w-sm'
-          : 'bg-blue-100 dark:bg-blue-900/50 text-gray-800 dark:text-gray-200 p-3 rounded-lg max-w-sm';
-        if (isLoading) { bubble.id='loading-bubble'; bubble.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`; }
-        else { bubble.textContent = text; }
-        wrap.appendChild(bubble);
-        chatHistory.appendChild(wrap);
-        chatHistory.scrollTop = chatHistory.scrollHeight;
-      }
-      function updateMessage (text) {
-        const b = document.getElementById('loading-bubble');
-        if (b) { b.textContent = text; b.removeAttribute('id'); }
-      }
+            document.getElementById('download-btn').addEventListener('click', () => {
+                 const dataStr = localStorage.getItem('tasks-data');
+                 if (!dataStr) return alert("Nenhuma tarefa para baixar.");
 
-      // Status helpers
-      function setCompletionState (item, done) {
-        const btn = item.querySelector('.toggle-button');
-        const check = btn.querySelector('.fa-check');
-        if (done) {
-          item.classList.add('completed');
-          btn.classList.add('bg-green-500','border-green-500','dark:bg-green-600','dark:border-green-600');
-          check.classList.add('opacity-100');
-        } else {
-          item.classList.remove('completed');
-          btn.classList.remove('bg-green-500','border-green-500','dark:bg-green-600','dark:border-green-600');
-          check.classList.remove('opacity-100');
-        }
-      }
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                const url = URL.createObjectURL(dataBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'tarefas.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+            
+            searchInput.addEventListener('input', applyFiltersAndSearch);
 
-      function syncParentStatus (taskEntry) {
-        const subs = taskEntry.querySelectorAll('.subtask-item');
-        const parentItem = taskEntry.querySelector('.task-item');
-        const badge = parentItem.querySelector('.status-badge');
-        if (subs.length===0){ badge.classList.add('cursor-pointer'); updateStatusSummary(); return; }
-        badge.classList.remove('cursor-pointer');
-        const firstIdx = parseInt(subs[0].querySelector('.status-badge').dataset.statusIndex);
-        const allSame = [...subs].every(st => parseInt(st.querySelector('.status-badge').dataset.statusIndex)===firstIdx);
-        if (allSame) changeStatus(parentItem, firstIdx);
-        else changeStatus(parentItem, emAndamentoIndex);
-      }
+            filterButtonsContainer.addEventListener('click', (e) => {
+                const target = e.target.closest('.filter-btn');
+                if (!target) return;
 
-      function changeStatus (item, newIndex, parentTaskEntry=null) {
-        const badge = item.querySelector('.status-badge');
-        const st = statuses[newIndex];
-        item.dataset.statusStartTime = new Date().toISOString();
-        badge.textContent = st.name;
-        badge.className = `status-badge text-xs font-semibold px-2 py-1 rounded-full ${st.classes} ${st.darkClasses}`;
-        if (item.classList.contains('task-item') || item.classList.contains('subtask-item')) badge.classList.add('cursor-pointer');
-        badge.dataset.statusIndex = newIndex;
+                const currentActive = filterButtonsContainer.querySelector('.active');
+                if(currentActive) {
+                    currentActive.classList.remove('active', 'bg-blue-600', 'text-white', 'dark:bg-blue-600');
+                    currentActive.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-200');
+                }
+                
+                target.classList.add('active', 'bg-blue-600', 'text-white', 'dark:bg-blue-600');
+                target.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-200');
+                
+                activeFilter = target.dataset.filter;
+                applyFiltersAndSearch();
+            });
+            
+            const apiKeyBtn = document.getElementById('api-key-btn');
+            const apiKeyModal = document.getElementById('api-key-modal');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+            const apiKeyInput = document.getElementById('api-key-input');
+            
+            apiKeyBtn.addEventListener('click', () => {
+                apiKeyInput.value = apiKey;
+                apiKeyModal.classList.remove('hidden');
+            });
 
-        setCompletionState(item, newIndex===finalizadoIndex);
+            closeModalBtn.addEventListener('click', () => {
+                apiKeyModal.classList.add('hidden');
+            });
+            
+            apiKeyModal.addEventListener('click', (e) => {
+                if(e.target === apiKeyModal) {
+                     apiKeyModal.classList.add('hidden');
+                }
+            });
 
-        if (item.classList.contains('subtask-item') && parentTaskEntry) { syncParentStatus(parentTaskEntry); }
-        else { updateStatusSummary(); }
-        saveTasks();
-        setTimeout(applyFiltersAndSearch,0);
-        setTimeout(updateDashboard,0);
-      }
+            saveApiKeyBtn.addEventListener('click', () => {
+                const newKey = apiKeyInput.value.trim();
+                localStorage.setItem('gemini-api-key', newKey);
+                apiKey = newKey;
+                updateAIVisibility();
+                apiKeyModal.classList.add('hidden');
+            });
 
-      function toggleTaskCompletion (item, parentTaskEntry=null) {
-        const isMain = item.classList.contains('task-item');
-        if (isMain) {
-          const done = item.classList.contains('completed');
-          const idx = !done ? finalizadoIndex : 0;
-          changeStatus(item, idx);
-          const subs = item.closest('.task-entry').querySelectorAll('.subtask-item');
-          subs.forEach(st=> changeStatus(st, idx, item.closest('.task-entry')));
-        } else {
-          const done = item.classList.contains('completed');
-          const idx = !done ? finalizadoIndex : 0;
-          changeStatus(item, idx, parentTaskEntry);
-        }
-      }
+            const tabs = document.getElementById('tabs');
+            const tasksView = document.getElementById('tasks-view');
+            const analysisView = document.getElementById('analysis-view');
+            const chatView = document.getElementById('chat-view');
 
-      function attachTaskEvents (taskEntry) {
-        const taskItem = taskEntry.querySelector('.task-item');
-        const deleteButton = taskEntry.querySelector('.delete-button');
-        const toggleButton = taskEntry.querySelector('.toggle-button');
-        const addSubtaskButton = taskEntry.querySelector('.add-subtask-button');
-        const subtaskForm = taskEntry.querySelector('.subtask-form');
-        const subtaskInput = taskEntry.querySelector('.subtask-input');
-        const subtaskList = taskEntry.querySelector('.subtask-list');
+            tabs.addEventListener('click', (e) => {
+                const target = e.target.closest('.tab-btn');
+                if(!target) return;
+                
+                tabs.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                target.classList.add('active');
 
-        const editDescriptionButton = taskEntry.querySelector('.edit-description-button');
-        const taskDescription = taskEntry.querySelector('.task-description');
-        const descriptionForm = taskEntry.querySelector('.description-form');
-        const descriptionInput = taskEntry.querySelector('.description-input');
+                tasksView.classList.add('hidden');
+                analysisView.classList.add('hidden');
+                chatView.classList.add('hidden');
 
-        const statusBadge = taskEntry.querySelector('.status-badge');
-        const generateSubtasksBtn = taskEntry.querySelector('.generate-subtasks-btn');
-        const generateDescriptionBtn = taskEntry.querySelector('.generate-description-btn');
+                const tab = target.dataset.tab;
+                if (tab === 'analysis') {
+                    analysisView.classList.remove('hidden');
+                    updateDashboard();
+                } else if (tab === 'chat') {
+                    chatView.classList.remove('hidden');
+                } else {
+                    tasksView.classList.remove('hidden');
+                }
+            });
 
-        if (generateSubtasksBtn) generateSubtasksBtn.addEventListener('click', ()=> generateSubtasks(taskEntry));
-        if (generateDescriptionBtn) generateDescriptionBtn.addEventListener('click', ()=> generateDescription(taskEntry));
+            document.getElementById('chat-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                sendChatMessage();
+            });
+            
+            const attachFileBtn = document.getElementById('attach-file-btn');
+            const chatFileInput = document.getElementById('chat-file-input');
+            const filePreviewArea = document.getElementById('file-preview-area');
+            const filePreviewName = document.getElementById('file-preview-name');
+            const removeFileBtn = document.getElementById('remove-file-btn');
 
-        deleteButton.addEventListener('click', () => {
-          taskEntry.classList.add('opacity-0','scale-90');
-          setTimeout(()=>{ taskEntry.remove(); updateStatusSummary(); updateDashboard(); saveTasks(); },300);
+            attachFileBtn.addEventListener('click', () => chatFileInput.click());
+
+            chatFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        attachedFileContent = event.target.result;
+                        filePreviewName.textContent = file.name;
+                        filePreviewArea.classList.remove('hidden');
+                        filePreviewArea.classList.add('flex');
+                    };
+                    reader.readAsText(file);
+                }
+            });
+
+            removeFileBtn.addEventListener('click', resetFileAttachment);
+
+
+            // Inicialização Real
+            applyTheme(); 
+            initializeStatusSummary();
+            initializeFilters();
+            loadTasks();
+            
+            document.querySelectorAll('.task-entry').forEach(entry => {
+                attachTaskEvents(entry);
+                syncParentStatus(entry);
+            });
+            updateStatusSummary();
+            applyFiltersAndSearch();
+            updateAIVisibility(); 
+            startTimers();
         });
-
-        toggleButton.addEventListener('click', ()=> toggleTaskCompletion(taskItem));
-
-        statusBadge.addEventListener('click', () => {
-          if (subtaskList.children.length>0) return;
-          let idx = parseInt(statusBadge.dataset.statusIndex);
-          let next = (idx+1)%statuses.length;
-          changeStatus(taskItem, next);
-        });
-
-        function handleDescriptionEdit () {
-          taskDescription.classList.toggle('hidden');
-          descriptionForm.classList.toggle('hidden');
-          if (!descriptionForm.classList.contains('hidden')) {
-            descriptionInput.value = taskDescription.textContent==='Adicionar uma descrição...' ? '' : taskDescription.textContent;
-            descriptionInput.focus();
-          }
-        }
-        editDescriptionButton.addEventListener('click', handleDescriptionEdit);
-        taskDescription.addEventListener('click', handleDescriptionEdit);
-
-        descriptionForm.addEventListener('submit', (e)=>{
-          e.preventDefault();
-          const val = descriptionInput.value.trim();
-          taskDescription.textContent = val==='' ? 'Adicionar uma descrição...' : val;
-          handleDescriptionEdit();
-          saveTasks();
-        });
-
-        addSubtaskButton.addEventListener('click', ()=>{
-          subtaskForm.classList.toggle('hidden');
-          subtaskInput.focus();
-        });
-
-        subtaskForm.addEventListener('submit', (e)=>{
-          e.preventDefault();
-          const txt = subtaskInput.value.trim();
-          if (txt) {
-            const st = createSubtaskElement(txt, taskEntry);
-            subtaskList.appendChild(st);
-            subtaskInput.value='';
-            syncParentStatus(taskEntry);
-            saveTasks();
-          }
-        });
-      }
-
-      function applyFiltersAndSearch () {
-        const term = searchInput.value.toLowerCase();
-        document.querySelectorAll('.task-entry').forEach(entry=>{
-          const text = entry.querySelector('.task-item .task-text').textContent.toLowerCase();
-          const desc = entry.querySelector('.task-item .task-description').textContent.toLowerCase();
-          const status = entry.querySelector('.task-item .status-badge').textContent;
-          const searchMatch = text.includes(term) || desc.includes(term);
-          const filterMatch = activeFilter==='Todos' || status===activeFilter;
-          entry.style.display = (searchMatch && filterMatch) ? '' : 'none';
-        });
-      }
-
-      function initializeFilters () {
-        let html = `<button data-filter="Todos" class="filter-btn active px-3 py-1 text-sm font-medium rounded-md bg-blue-600 text-white dark:bg-blue-600 transition">Todos</button>`;
-        statuses.forEach(s=>{
-          html += `<button data-filter="${s.name}" class="filter-btn px-3 py-1 text-sm font-medium rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 transition">${s.name}</button>`;
-        });
-        filterButtonsContainer.innerHTML = html;
-      }
-
-      function applyTheme () {
-        const isDark = localStorage.getItem('color-theme')==='dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.classList.toggle('dark', isDark);
-        document.getElementById('theme-toggle-light-icon').classList.toggle('hidden', !isDark);
-        document.getElementById('theme-toggle-dark-icon').classList.toggle('hidden', isDark);
-        if (statusPieChart || activityBarChart) setTimeout(updateDashboard, 50);
-      }
-
-      function updateAIVisibility () {
-        const aiButtons = document.querySelectorAll('.generate-description-btn, .generate-subtasks-btn');
-        aiButtons.forEach(btn => apiKey ? btn.classList.remove('hidden') : btn.classList.add('hidden'));
-      }
-
-      function formatDuration (ms) {
-        if (ms<0) ms=0;
-        let s = Math.floor(ms/1000);
-        let m = Math.floor(s/60);
-        let h = Math.floor(m/60);
-        let d = Math.floor(h/24);
-        s%=60; m%=60; h%=24;
-        let out=""; if(d>0) out+=`${d}d `; if(h>0) out+=`${h}h `; if(m>0) out+=`${m}m `; out+=`${s}s`; return out.trim();
-      }
-      function startTimers () {
-        setInterval(()=>{
-          document.querySelectorAll('.task-item, .subtask-item').forEach(item=>{
-            const span = item.querySelector('.status-timer span');
-            if (!span) return;
-            const start = new Date(item.dataset.statusStartTime);
-            const elapsed = new Date() - start;
-            span.textContent = formatDuration(elapsed);
-          });
-        },1000);
-      }
-
-      function saveTasks () {
-        const tasks = [];
-        document.querySelectorAll('.task-entry').forEach(entry=>{
-          const item = entry.querySelector('.task-item');
-          const text = item.querySelector('.task-text').textContent;
-          let desc = item.querySelector('.task-description').textContent;
-          if (desc==='Adicionar uma descrição...') desc='';
-          const idx = parseInt(item.querySelector('.status-badge').dataset.statusIndex);
-          const statusName = statuses[idx].name;
-          const completed = item.classList.contains('completed');
-          const createdAt = new Date(entry.dataset.timestamp).toISOString();
-          const statusStartTime = new Date(item.dataset.statusStartTime).toISOString();
-          const subs = [];
-          entry.querySelectorAll('.subtask-item').forEach(st=>{
-            const stText = st.querySelector('.task-text').textContent;
-            const stIdx = parseInt(st.querySelector('.status-badge').dataset.statusIndex);
-            const stName = statuses[stIdx].name;
-            const stCompleted = st.classList.contains('completed');
-            const stCreatedAt = new Date(st.dataset.timestamp).toISOString();
-            const stStart = new Date(st.dataset.statusStartTime).toISOString();
-            subs.push({ text: stText, status: stName, completed: stCompleted, createdAt: stCreatedAt, statusStartTime: stStart });
-          });
-          tasks.push({ text, description:desc, status:statusName, completed, createdAt, statusStartTime, subtasks:subs });
-        });
-        localStorage.setItem('tasks-data', JSON.stringify(tasks));
-      }
-
-      function loadTasks () {
-        const saved = localStorage.getItem('tasks-data');
-        if (saved) {
-          const data = JSON.parse(saved);
-          data.forEach(t=>{
-            const found = statuses.findIndex(s=>s.name===t.status);
-            const statusIndex = found >= 0 ? found : 0; /* fix do findIndex */
-            const el = createTaskElement(
-              t.text,
-              t.description || 'Adicionar uma descrição...',
-              statusIndex,
-              t.completed,
-              t.subtasks,
-              t.createdAt,
-              t.statusStartTime
-            );
-            taskList.appendChild(el);
-          });
-        } else {
-          const task1 = createTaskElement("Reunião de equipe","Discutir os resultados do último trimestre.", emAndamentoIndex, false, [{text:"Preparar apresentação", status:"Aberto", completed:false, createdAt:new Date().toISOString()}], new Date().toISOString());
-          if (task1) taskList.appendChild(task1);
-          const task2 = createTaskElement("Enviar relatório mensal","Adicionar uma descrição...", finalizadoIndex, true, [], new Date(new Date().setDate(new Date().getDate()-2)).toISOString());
-          if (task2) taskList.appendChild(task2);
-        }
-      }
-
-      // Events
-      taskForm.addEventListener('submit', e=>{
-        e.preventDefault();
-        const txt = taskInput.value.trim();
-        if (!txt) return;
-        const t = createTaskElement(txt);
-        taskList.prepend(t);
-        taskInput.value=''; taskInput.focus();
-        updateStatusSummary(); applyFiltersAndSearch(); saveTasks();
-      });
-
-      document.getElementById('theme-toggle').addEventListener('click', ()=>{
-        const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('color-theme', isDark ? 'dark':'light');
-        applyTheme();
-      });
-
-      document.getElementById('download-btn').addEventListener('click', ()=>{
-        const dataStr = localStorage.getItem('tasks-data');
-        if (!dataStr) { alert("Nenhuma tarefa para baixar."); return; }
-        const blob = new Blob([dataStr], {type:'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; a.download = 'tarefas.json';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
-
-      searchInput.addEventListener('input', applyFiltersAndSearch);
-
-      filterButtonsContainer.addEventListener('click', e=>{
-        const target = e.target.closest('.filter-btn'); if (!target) return;
-        filterButtonsContainer.querySelectorAll('.filter-btn').forEach(b=>{
-          b.classList.remove('active','bg-blue-600','text-white','dark:bg-blue-600');
-          b.classList.add('bg-gray-200','dark:bg-gray-700','text-gray-700','dark:text-gray-200');
-        });
-        target.classList.add('active','bg-blue-600','text-white','dark:bg-blue-600');
-        target.classList.remove('bg-gray-200','dark:bg-gray-700','text-gray-700','dark:text-gray-200');
-        activeFilter = target.dataset.filter;
-        applyFiltersAndSearch();
-      });
-
-      const apiKeyBtn = document.getElementById('api-key-btn');
-      const apiKeyModal = document.getElementById('api-key-modal');
-      const closeModalBtn = document.getElementById('close-modal-btn');
-      const saveApiKeyBtn = document.getElementById('save-api-key-btn');
-      const apiKeyInput = document.getElementById('api-key-input');
-
-      apiKeyBtn.addEventListener('click', ()=>{ apiKeyInput.value = apiKey; apiKeyModal.classList.remove('hidden'); });
-      closeModalBtn.addEventListener('click', ()=> apiKeyModal.classList.add('hidden'));
-      apiKeyModal.addEventListener('click', e=>{ if (e.target===apiKeyModal) apiKeyModal.classList.add('hidden'); });
-      saveApiKeyBtn.addEventListener('click', ()=>{
-        const newKey = apiKeyInput.value.trim();
-        localStorage.setItem('gemini-api-key', newKey);
-        apiKey = newKey; updateAIVisibility(); apiKeyModal.classList.add('hidden');
-      });
-
-      const tabs = document.getElementById('tabs');
-      const tasksView = document.getElementById('tasks-view');
-      const analysisView = document.getElementById('analysis-view');
-      const chatView = document.getElementById('chat-view');
-
-      tabs.addEventListener('click', e=>{
-        const t = e.target.closest('.tab-btn'); if (!t) return;
-        tabs.querySelectorAll('.tab-btn').forEach(b=> b.classList.remove('active'));
-        t.classList.add('active');
-
-        tasksView.classList.add('hidden');
-        analysisView.classList.add('hidden');
-        chatView.classList.add('hidden');
-
-        const tab = t.dataset.tab;
-        if (tab==='analysis'){ analysisView.classList.remove('hidden'); updateDashboard(); }
-        else if (tab==='chat'){ chatView.classList.remove('hidden'); }
-        else { tasksView.classList.remove('hidden'); }
-      });
-
-      document.getElementById('chat-form').addEventListener('submit', e=>{ e.preventDefault(); sendChatMessage(); });
-
-      // Init
-      applyTheme();
-      initializeStatusSummary();
-      initializeFilters();
-      loadTasks();
-      document.querySelectorAll('.task-entry').forEach(e=>{ attachTaskEvents(e); syncParentStatus(e); });
-      updateStatusSummary();
-      applyFiltersAndSearch();
-      updateAIVisibility();
-      startTimers();
-    });
-  </script>
+    </script>
 </body>
 </html>
+
