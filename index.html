@@ -7,47 +7,30 @@
 
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script> tailwind.config = { darkMode: 'class' } </script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
 
   <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet"/>
 
   <!-- Font Awesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body { font-family:'Inter',sans-serif; transition:background-color .3s ease; }
-    .task-item,.subtask-item,.task-entry { transition:all .3s ease; overflow:hidden; }
-    .task-text { position:relative; transition:color .4s ease; }
-    .task-text::after { content:''; position:absolute; top:50%; left:0; width:100%; height:2px; background:#34495e; transform:scaleX(0); transform-origin:left; transition:transform .4s ease; }
-    .completed .task-text { color:#9ca3af; }
-    .completed .task-text::after { transform:scaleX(1); }
-    .completed .task-description { color:#9ca3af; }
-    .dark .completed .task-text,.dark .completed .task-description { color:#4b5563; }
-    .task-actions { opacity:0; transition:opacity .3s ease; }
-    .task-item:hover .task-actions { opacity:1; }
-    .subtask-item .delete-button { opacity:0; }
-    .subtask-item:hover .delete-button { opacity:1; }
-    .filter-btn.active { background-color:#3b82f6; color:#fff; }
-    .dark .filter-btn.active { background-color:#3b82f6; }
-    .project-tab.active { background-color:#3b82f6; color:#fff; }
-    .dark .project-tab.active { background-color:#3b82f6; }
-    .tab-btn.active { border-color:#3b82f6; color:#3b82f6; }
-    .dark .tab-btn.active { border-color:#3b82f6; color:#3b82f6; }
-    #chat-history { height:400px; overflow-y:auto; }
-  </style>
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
 
   <!-- Contêiner Principal -->
   <div class="bg-white dark:bg-gray-800 w-full max-w-lg mx-auto rounded-2xl shadow-2xl p-6 md:p-8 transition-colors duration-300 relative">
 
-    <!-- Ações no topo -->
+    <!-- Botões topo -->
     <div class="absolute top-5 right-5 flex items-center gap-2 z-10">
       <button id="api-key-btn" title="Configurar API Key" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
         <i class="fas fa-key"></i>
@@ -64,7 +47,9 @@
     <!-- Abas de Projeto -->
     <div id="project-tabs-container" class="mb-4">
       <div class="flex items-center gap-2 flex-wrap">
-        <div id="project-tabs" class="flex items-center gap-2 flex-wrap"></div>
+        <div id="project-tabs" class="flex items-center gap-2 flex-wrap">
+          <!-- Abas de projeto via JS -->
+        </div>
         <button id="add-project-btn" title="Adicionar novo projeto" class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition">
           <i class="fas fa-plus"></i>
         </button>
@@ -91,19 +76,19 @@
 
         <form id="task-form" class="flex items-center gap-3 mb-6">
           <input id="task-input" type="text" placeholder="Ex: Fazer uma caminhada..." autocomplete="off"
-                 class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                 class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
           <button type="submit" class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
             <i class="fas fa-plus"></i>
           </button>
         </form>
 
-        <div id="status-summary" class="mb-8 space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg"></div>
+        <div id="status-summary" class="mb-8 space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg transition-colors duration-300"></div>
 
         <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
           <div class="relative w-full sm:flex-grow">
             <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
             <input id="search-input" type="text" placeholder="Pesquisar tarefas..."
-                   class="w-full pl-10 p-2.5 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                   class="w-full pl-10 p-2.5 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
           </div>
         </div>
 
@@ -136,9 +121,9 @@
           <button type="button" id="attach-file-btn" title="Anexar arquivo" class="text-gray-500 dark:text-gray-400 p-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition">
             <i class="fas fa-paperclip"></i>
           </button>
-          <input type="file" id="chat-file-input" class="hidden" accept=".txt,.md,.text">
+          <input type="file" id="chat-file-input" class="hidden" accept=".txt,.md,.text"/>
           <input id="chat-input" type="text" placeholder="Digite sua mensagem..." autocomplete="off"
-                 class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                 class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
           <button type="submit" class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
             <i class="fas fa-paper-plane"></i>
           </button>
@@ -152,7 +137,6 @@
           <p class="text-gray-500 dark:text-gray-400 mt-2">Seu progresso em um piscar de olhos.</p>
         </header>
 
-        <!-- KPIs -->
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div class="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg text-center">
             <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">Total de Tarefas</h4>
@@ -168,7 +152,6 @@
           </div>
         </div>
 
-        <!-- Gráficos -->
         <div class="space-y-8">
           <div>
             <h3 class="text-lg font-medium text-gray-800 dark:text-gray-100 mb-4">Tarefas por Status</h3>
@@ -185,10 +168,9 @@
         </div>
       </div>
     </div>
-
   </div>
 
-  <!-- Modal da API Key -->
+  <!-- Modal API Key -->
   <div id="api-key-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md relative">
       <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -198,19 +180,17 @@
       <div>
         <label for="api-key-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sua API Key</label>
         <div class="mt-1">
-          <input type="password" id="api-key-input" class="block w-full p-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-800 dark:text-gray-200" placeholder="Cole sua chave aqui...">
+          <input type="password" id="api-key-input" class="block w-full p-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-800 dark:text-gray-200" placeholder="Cole sua chave aqui..."/>
         </div>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" class="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Obtenha sua API Key aqui</a>
       </div>
       <div class="mt-5 sm:mt-6">
-        <button id="save-api-key-btn" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">
-          Salvar
-        </button>
+        <button id="save-api-key-btn" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">Salvar</button>
       </div>
     </div>
   </div>
 
-  <!-- JS separado -->
-  <script src="script.js"></script>
+  <!-- App JS -->
+  <script defer src="app.js"></script>
 </body>
 </html>

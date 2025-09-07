@@ -1,0 +1,55 @@
+/* Tipografia base */
+body {
+  font-family: 'Inter', sans-serif;
+  transition: background-color 0.3s ease;
+}
+
+/* Transições dos itens */
+.task-item, .subtask-item, .task-entry {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+/* Risco no texto quando concluído */
+.task-text {
+  position: relative;
+  transition: color 0.4s ease;
+}
+.task-text::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: #34495e;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s ease;
+}
+
+.completed .task-text { color: #9ca3af; }
+.completed .task-text::after { transform: scaleX(1); }
+.completed .task-description { color: #9ca3af; }
+.dark .completed .task-text, .dark .completed .task-description { color: #4b5563; }
+
+/* Ações só no hover */
+.task-actions { opacity: 0; transition: opacity 0.3s ease; }
+.task-item:hover .task-actions { opacity: 1; }
+
+/* Subtarefas: botão delete no hover */
+.subtask-item .delete-button { opacity: 0; }
+.subtask-item:hover .delete-button { opacity: 1; }
+
+/* Estado ativo de filtros/abas */
+.filter-btn.active { background-color: #3b82f6; color: white; }
+.dark .filter-btn.active { background-color: #3b82f6; }
+
+.project-tab.active { background-color: #3b82f6; color: white; }
+.dark .project-tab.active { background-color: #3b82f6; }
+
+.tab-btn.active { border-color: #3b82f6; color: #3b82f6; }
+.dark .tab-btn.active { border-color: #3b82f6; color: #3b82f6; }
+
+/* Chat height */
+#chat-history { height: 400px; overflow-y: auto; }
