@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class=""> <!-- A classe 'dark' será adicionada aqui -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Tarefas Elegante</title>
+    
+    <!-- Tailwind CSS Script -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS Config -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    
+    <!-- Google Fonts para uma tipografia moderna -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* Estilização personalizada sobre o Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+        
+        /* Efeito de transição suave para as tarefas */
+        .task-item, .subtask-item, .task-entry {
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        /* Animação para riscar o texto */
+        .task-text {
+            position: relative;
+            transition: color 0.4s ease;
+        }
+        
+        .task-text::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #34495e;
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .completed .task-text {
+            color: #9ca3af; /* cinza-400 do Tailwind */
+        }
+        .completed .task-text::after {
+            transform: scaleX(1);
+        }
+        .completed .task-description {
+            color: #9ca3af;
+        }
+        .dark .completed .task-text, .dark .completed .task-description {
+             color: #4b5563; /* cinza-600 */
+        }
+
+
+        /* Esconder os botões de ação e mostrar no hover */
+        .task-actions {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+
+        .subtask-item .delete-button {
+             opacity: 0;
+        }
+        .subtask-item:hover .delete-button {
+             opacity: 1;
+        }
+
+        .filter-btn.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .dark .filter-btn.active {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Contêiner Principal da Lista de Tarefas -->
+    <div class="bg-white dark:bg-gray-800 w-full max-w-lg mx-auto rounded-2xl shadow-2xl p-6 md:p-8 transition-colors duration-300 relative">
+        
+        <!-- Botões de Ação Superiores -->
+        <div class="absolute top-5 right-5 flex items-center gap-2">
+            <button id="api-key-btn" title="Configurar API Key" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
+                <i class="fas fa-key"></i>
+            </button>
+            <button id="download-btn" title="Baixar tarefas" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
+                <i class="fas fa-download"></i>
+            </button>
+            <button id="theme-toggle" title="Alternar tema" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
+                <i id="theme-toggle-dark-icon" class="fas fa-moon hidden"></i>
+                <i id="theme-toggle-light-icon" class="fas fa-sun hidden"></i>
+            </button>
+        </div>
+
+        <!-- Cabeçalho -->
+        <header class="text-center mb-8 pt-12">
+            <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Minhas Tarefas</h1>
+            <p class="text-gray-500 dark:text-gray-400 mt-2">Mantenha seu dia organizado e produtivo.</p>
+        </header>
+
+        <!-- Formulário para Adicionar Nova Tarefa -->
+        <form id="task-form" class="flex items-center gap-3 mb-6">
+            <input 
+                type="text" 
+                id="task-input"
+                placeholder="Ex: Fazer uma caminhada..." 
+                class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                autocomplete="off">
+            <button 
+                type="submit" 
+                class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
+                <i class="fas fa-plus"></i>
+            </button>
+        </form>
+
+        <!-- Resumo do Status -->
+        <div id="status-summary" class="mb-8 space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg transition-colors duration-300">
+            <!-- As barras de progresso serão injetadas aqui pelo JS -->
+        </div>
+
+        <!-- Filtros e Pesquisa -->
+        <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <div class="relative w-full sm:flex-grow">
+                <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="search-input" placeholder="Pesquisar tarefas..." class="w-full pl-10 p-2.5 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+            </div>
+        </div>
+        <div id="filter-buttons" class="flex items-center gap-2 flex-wrap justify-center mb-6">
+            <!-- Botões de filtro serão gerados aqui -->
+        </div>
+
+
+        <!-- Lista de Tarefas -->
+        <div id="task-list" class="space-y-4">
+            <!-- As tarefas serão adicionadas aqui via JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Modal da API Key -->
+    <div id="api-key-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md relative">
+            <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100 mb-4">Configurar API Key do Gemini</h3>
+            <div>
+                <label for="api-key-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sua API Key</label>
+                <div class="mt-1">
+                    <input type="password" id="api-key-input" class="block w-full p-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-800 dark:text-gray-200" placeholder="Cole sua chave aqui...">
+                </div>
+                 <a href="https://aistudio.google.com/app/apikey" target="_blank" class="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Obtenha sua API Key aqui</a>
+            </div>
+            <div class="mt-5 sm:mt-6">
+                <button id="save-api-key-btn" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const taskForm = document.getElementById('task-form');
+        const taskInput = document.getElementById('task-input');
+        const taskList = document.getElementById('task-list');
+        const searchInput = document.getElementById('search-input');
+        const filterButtonsContainer = document.getElementById('filter-buttons');
+
+        let apiKey = localStorage.getItem('gemini-api-key') || ""; 
+
+        let activeFilter = 'Todos';
+
+        const statuses = [
+            { name: 'Aberto', classes: 'bg-blue-100 text-blue-800', darkClasses: 'dark:bg-blue-900/50 dark:text-blue-300', color: '#3b82f6' },
+            { name: 'Em Andamento', classes: 'bg-yellow-100 text-yellow-800', darkClasses: 'dark:bg-yellow-900/50 dark:text-yellow-300', color: '#f59e0b'},
+            { name: 'Desenvolvido', classes: 'bg-purple-100 text-purple-800', darkClasses: 'dark:bg-purple-900/50 dark:text-purple-300', color: '#8b5cf6' },
+            { name: 'Teste', classes: 'bg-indigo-100 text-indigo-800', darkClasses: 'dark:bg-indigo-900/50 dark:text-indigo-300', color: '#6366f1' },
+            { name: 'Finalizado', classes: 'bg-green-100 text-green-800', darkClasses: 'dark:bg-green-900/50 dark:text-green-300', color: '#22c55e' }
+        ];
+        const finalizadoIndex = 4;
+        const emAndamentoIndex = 1;
+
+        function initializeStatusSummary() {
+            const summaryContainer = document.getElementById('status-summary');
+            if (!summaryContainer) return;
+            summaryContainer.innerHTML = statuses.map((status, index) => `
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-sm font-medium text-gray-600 dark:text-gray-300">${status.name}</span>
+                        <span id="status-percent-${index}" class="text-sm font-medium text-gray-500 dark:text-gray-400">0 (0%)</span>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                        <div id="status-bar-${index}" class="h-2.5 rounded-full transition-all duration-500" style="width: 0%; background-color: ${status.color}"></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStatusSummary() {
+            const allTasks = document.querySelectorAll('.task-item');
+            const totalTasks = allTasks.length;
+            const counts = Array(statuses.length).fill(0);
+
+            allTasks.forEach(task => {
+                const statusBadge = task.querySelector('.status-badge');
+                if (statusBadge) {
+                    const statusIndex = parseInt(statusBadge.dataset.statusIndex);
+                    counts[statusIndex]++;
+                }
+            });
+
+            counts.forEach((count, index) => {
+                const percentage = totalTasks > 0 ? ((count / totalTasks) * 100).toFixed(0) : 0;
+                const percentEl = document.getElementById(`status-percent-${index}`);
+                const barEl = document.getElementById(`status-bar-${index}`);
+                if (percentEl && barEl) {
+                    percentEl.textContent = `${count} (${percentage}%)`;
+                    barEl.style.width = `${percentage}%`;
+                }
+            });
+        }
+
+        function createTaskElement(taskText, description = 'Adicionar uma descrição...', statusIdx = 0, isCompleted = false, subtasks = [], createdAt = null) {
+            const taskEntry = document.createElement('div');
+            taskEntry.className = 'task-entry';
+            const timestamp = createdAt || new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+            taskEntry.innerHTML = `
+                <div class="task-item flex items-start bg-gray-50 dark:bg-gray-700/60 p-4 rounded-lg">
+                    <button class="toggle-button w-7 h-7 flex-shrink-0 border-2 border-gray-300 dark:border-gray-500 rounded-full mr-4 mt-1 flex items-center justify-center transition">
+                        <i class="fas fa-check text-white text-xs transition-opacity opacity-0"></i>
+                    </button>
+                    <div class="task-details flex-grow">
+                        <div class="flex items-center gap-3">
+                            <span class="task-text text-gray-700 dark:text-gray-200">${taskText}</span>
+                            <span class="status-badge cursor-pointer text-xs font-semibold px-2 py-1 rounded-full ${statuses[statusIdx].classes} ${statuses[statusIdx].darkClasses}" data-status-index="${statusIdx}">${statuses[statusIdx].name}</span>
+                        </div>
+                        <p class="task-description text-sm text-gray-500 dark:text-gray-400 mt-1 cursor-pointer">${description}</p>
+                        <form class="description-form hidden w-full mt-1">
+                            <input type="text" class="description-input w-full p-1.5 text-sm bg-transparent border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 transition" placeholder="Digite a descrição e pressione Enter...">
+                        </form>
+                        <div class="text-xs text-gray-400 dark:text-gray-500 mt-2 flex items-center">
+                           <i class="fas fa-calendar-alt mr-1.5"></i>
+                           <span class="timestamp">${timestamp}</span>
+                        </div>
+                    </div>
+                    <div class="task-actions flex items-center gap-2 ml-4">
+                        <button class="edit-description-button text-gray-400 hover:text-green-500 dark:hover:text-green-400 transition" title="Editar descrição"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="generate-description-btn text-gray-400 hover:text-cyan-500 dark:hover:text-cyan-400 transition ${!apiKey ? 'hidden' : ''}" title="✨ Gerar Descrição com IA"><i class="fas fa-wand-magic-sparkles"></i></button>
+                        <button class="add-subtask-button text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition" title="Adicionar subtarefa"><i class="fas fa-plus-circle"></i></button>
+                        <button class="generate-subtasks-btn text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 transition ${!apiKey ? 'hidden' : ''}" title="✨ Gerar Subtarefas com IA"><i class="fas fa-sitemap"></i></button>
+                        <button class="delete-button text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition" title="Excluir tarefa"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+                <div class="subtask-section pl-12 pr-4">
+                    <div class="subtask-list space-y-2 mt-2"></div>
+                    <form class="subtask-form hidden mt-2 flex items-center gap-2">
+                        <input type="text" placeholder="Nova subtarefa..." class="subtask-input flex-grow p-2 text-sm bg-transparent border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-400 transition" autocomplete="off">
+                        <button type="submit" class="submit-subtask-button bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition"><i class="fas fa-level-down-alt fa-rotate-90"></i></button>
+                    </form>
+                </div>
+            `;
+            
+            if (isCompleted) {
+                setCompletionState(taskEntry.querySelector('.task-item'), true);
+            }
+
+            const subtaskList = taskEntry.querySelector('.subtask-list');
+            subtasks.forEach(sub => {
+                const subtaskEl = createSubtaskElement(sub.text, taskEntry, sub.status, sub.completed, sub.createdAt);
+                subtaskList.appendChild(subtaskEl);
+            });
+
+            attachTaskEvents(taskEntry);
+            return taskEntry;
+        }
+
+        function createSubtaskElement(subtaskText, parentTaskEntry, statusName = 'Aberto', isCompleted = false, createdAt = null) {
+            const subtaskItem = document.createElement('div');
+            subtaskItem.className = 'subtask-item flex items-start bg-gray-50/50 dark:bg-gray-700/30 p-2 rounded-md';
+            let statusIdx = statuses.findIndex(s => s.name === statusName);
+            if (statusIdx < 0) statusIdx = 0;
+            const timestamp = createdAt || new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+            subtaskItem.innerHTML = `
+                <button class="toggle-button w-6 h-6 flex-shrink-0 border-2 border-gray-300 dark:border-gray-500 rounded-full mr-3 mt-1 flex items-center justify-center transition">
+                    <i class="fas fa-check text-white text-xs transition-opacity opacity-0"></i>
+                </button>
+                <div class="flex-grow">
+                    <div class="flex items-center gap-2">
+                        <span class="task-text text-gray-600 dark:text-gray-300 text-sm">${subtaskText}</span>
+                        <span class="status-badge cursor-pointer text-xs font-semibold px-2 py-1 rounded-full ${statuses[statusIdx].classes} ${statuses[statusIdx].darkClasses}" data-status-index="${statusIdx}">${statuses[statusIdx].name}</span>
+                    </div>
+                    <div class="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center">
+                        <i class="fas fa-calendar-alt mr-1"></i>
+                        <span class="timestamp">${timestamp}</span>
+                    </div>
+                </div>
+                <button class="delete-button flex-shrink-0 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition ml-2"><i class="fas fa-times"></i></button>
+            `;
+
+            if (isCompleted) {
+                setCompletionState(subtaskItem, true);
+            }
+
+            subtaskItem.querySelector('.delete-button').addEventListener('click', () => {
+                subtaskItem.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => {
+                    subtaskItem.remove();
+                    syncParentStatus(parentTaskEntry);
+                }, 300);
+            });
+
+            subtaskItem.querySelector('.toggle-button').addEventListener('click', () => {
+                toggleTaskCompletion(subtaskItem, parentTaskEntry);
+            });
+            
+            subtaskItem.querySelector('.status-badge').addEventListener('click', (e) => {
+                let currentIndex = parseInt(e.target.dataset.statusIndex);
+                let nextIndex = (currentIndex + 1) % statuses.length;
+                changeStatus(subtaskItem, nextIndex, parentTaskEntry);
+            });
+
+            return subtaskItem;
+        }
+        
+        async function callGeminiAPI(systemPrompt, userQuery, button) {
+            if (!apiKey) {
+                console.error("API Key não configurada.");
+                alert("Por favor, configure sua API Key do Gemini primeiro.");
+                return null;
+            }
+            const icon = button.querySelector('i');
+            icon.classList.add('fa-spin');
+            button.disabled = true;
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+                return candidate?.content?.parts?.[0]?.text;
+            } catch (error) {
+                console.error("Erro na chamada da API Gemini:", error);
+                return null;
+            } finally {
+                icon.classList.remove('fa-spin');
+                button.disabled = false;
+            }
+        }
+
+        async function generateSubtasks(taskEntry) {
+            const generateBtn = taskEntry.querySelector('.generate-subtasks-btn');
+            const taskText = taskEntry.querySelector('.task-item .task-text').textContent;
+            let taskDesc = taskEntry.querySelector('.task-item .task-description').textContent;
+            if (taskDesc === 'Adicionar uma descrição...') taskDesc = '';
+
+            const systemPrompt = "Você é um assistente de produtividade. Sua tarefa é dividir uma tarefa maior em subtarefas menores e acionáveis. Forneça uma lista de 3 a 5 subtarefas em português. Responda apenas com as subtarefas, uma por linha, sem numeração ou marcadores.";
+            const userQuery = `Tarefa Principal: "${taskText}"\nDescrição: "${taskDesc}"`;
+
+            const generatedText = await callGeminiAPI(systemPrompt, userQuery, generateBtn);
+
+            if (generatedText) {
+                const subtaskList = taskEntry.querySelector('.subtask-list');
+                const subtaskSuggestions = generatedText.split('\n').filter(s => s.trim() !== '');
+                subtaskSuggestions.forEach(suggestion => {
+                    const newSubtask = createSubtaskElement(suggestion.trim(), taskEntry);
+                    subtaskList.appendChild(newSubtask);
+                });
+                syncParentStatus(taskEntry);
+            } else {
+                 console.error("Nenhuma sugestão de subtarefa foi gerada.");
+            }
+        }
+        
+        async function generateDescription(taskEntry) {
+            const generateBtn = taskEntry.querySelector('.generate-description-btn');
+            const taskDescriptionP = taskEntry.querySelector('.task-description');
+            const taskText = taskEntry.querySelector('.task-item .task-text').textContent;
+
+            const systemPrompt = "Você é um assistente de produtividade. Sua tarefa é escrever uma descrição concisa e útil para uma tarefa, com base em seu título. A descrição deve ter uma ou duas frases curtas. Responda apenas com o texto da descrição, sem formatação extra.";
+            const userQuery = `Gere uma descrição para a seguinte tarefa: "${taskText}"`;
+
+            const generatedText = await callGeminiAPI(systemPrompt, userQuery, generateBtn);
+
+            if (generatedText) {
+                taskDescriptionP.textContent = generatedText.trim();
+            } else {
+                 console.error("Nenhuma descrição foi gerada.");
+                 taskDescriptionP.textContent = "Erro ao gerar descrição.";
+            }
+        }
+
+
+        function setCompletionState(item, isCompleted) {
+             const toggleButton = item.querySelector('.toggle-button');
+             const checkIcon = toggleButton.querySelector('.fa-check');
+
+            if (isCompleted) {
+                item.classList.add('completed');
+                toggleButton.classList.add('bg-green-500', 'border-green-500', 'dark:bg-green-600', 'dark:border-green-600');
+                checkIcon.classList.add('opacity-100');
+            } else {
+                item.classList.remove('completed');
+                toggleButton.classList.remove('bg-green-500', 'border-green-500', 'dark:bg-green-600', 'dark:border-green-600');
+                checkIcon.classList.remove('opacity-100');
+            }
+        }
+        
+        function syncParentStatus(taskEntry) {
+            const subtasks = taskEntry.querySelectorAll('.subtask-item');
+            const parentTaskItem = taskEntry.querySelector('.task-item');
+            const parentStatusBadge = parentTaskItem.querySelector('.status-badge');
+
+            if (subtasks.length === 0) {
+                parentStatusBadge.classList.add('cursor-pointer');
+                updateStatusSummary();
+                return;
+            }
+
+            parentStatusBadge.classList.remove('cursor-pointer');
+            const firstStatusIndex = parseInt(subtasks[0].querySelector('.status-badge').dataset.statusIndex);
+            const allSame = [...subtasks].every(st => parseInt(st.querySelector('.status-badge').dataset.statusIndex) === firstStatusIndex);
+
+            if (allSame) {
+                changeStatus(parentTaskItem, firstStatusIndex);
+            } else {
+                changeStatus(parentTaskItem, emAndamentoIndex);
+            }
+        }
+        
+        function changeStatus(item, newIndex, parentTaskEntry = null) {
+            const statusBadge = item.querySelector('.status-badge');
+            const status = statuses[newIndex];
+            
+            statusBadge.textContent = status.name;
+            statusBadge.className = `status-badge text-xs font-semibold px-2 py-1 rounded-full ${status.classes} ${status.darkClasses}`;
+             if(item.classList.contains('task-item') || item.classList.contains('subtask-item')) {
+                 statusBadge.classList.add('cursor-pointer');
+             }
+            statusBadge.dataset.statusIndex = newIndex;
+
+            setCompletionState(item, newIndex === finalizadoIndex);
+
+            if(item.classList.contains('subtask-item') && parentTaskEntry) {
+                syncParentStatus(parentTaskEntry);
+            } else {
+                updateStatusSummary();
+            }
+            setTimeout(applyFiltersAndSearch, 0);
+        }
+
+        function toggleTaskCompletion(item, parentTaskEntry = null) {
+            const isMainTask = item.classList.contains('task-item');
+            if(isMainTask) {
+                const isCompleted = item.classList.contains('completed');
+                const newStatusIndex = !isCompleted ? finalizadoIndex : 0;
+                
+                changeStatus(item, newStatusIndex);
+                
+                const subtasks = item.closest('.task-entry').querySelectorAll('.subtask-item');
+                subtasks.forEach(subtask => {
+                    changeStatus(subtask, newStatusIndex, item.closest('.task-entry'));
+                });
+
+            } else {
+                const isCompleted = item.classList.contains('completed');
+                const newStatusIndex = !isCompleted ? finalizadoIndex : 0;
+                changeStatus(item, newStatusIndex, parentTaskEntry);
+            }
+        }
+        
+        function attachTaskEvents(taskEntry) {
+            const taskItem = taskEntry.querySelector('.task-item');
+            const deleteButton = taskEntry.querySelector('.delete-button');
+            const toggleButton = taskEntry.querySelector('.toggle-button');
+            const addSubtaskButton = taskEntry.querySelector('.add-subtask-button');
+            const subtaskForm = taskEntry.querySelector('.subtask-form');
+            const subtaskInput = taskEntry.querySelector('.subtask-input');
+            const subtaskList = taskEntry.querySelector('.subtask-list');
+            
+            const editDescriptionButton = taskEntry.querySelector('.edit-description-button');
+            const taskDescription = taskEntry.querySelector('.task-description');
+            const descriptionForm = taskEntry.querySelector('.description-form');
+            const descriptionInput = taskEntry.querySelector('.description-input');
+            
+            const statusBadge = taskEntry.querySelector('.status-badge');
+            const generateSubtasksBtn = taskEntry.querySelector('.generate-subtasks-btn');
+            const generateDescriptionBtn = taskEntry.querySelector('.generate-description-btn');
+
+            if (generateSubtasksBtn) {
+                generateSubtasksBtn.addEventListener('click', () => generateSubtasks(taskEntry));
+            }
+            if (generateDescriptionBtn) {
+                generateDescriptionBtn.addEventListener('click', () => generateDescription(taskEntry));
+            }
+
+
+            deleteButton.addEventListener('click', () => {
+                taskEntry.classList.add('opacity-0', 'scale-90');
+                setTimeout(() => {
+                    taskEntry.remove();
+                    updateStatusSummary();
+                }, 300);
+            });
+            
+            toggleButton.addEventListener('click', () => {
+                toggleTaskCompletion(taskItem);
+            });
+
+            statusBadge.addEventListener('click', () => {
+                if (subtaskList.children.length > 0) return;
+                let currentIndex = parseInt(statusBadge.dataset.statusIndex);
+                let nextIndex = (currentIndex + 1) % statuses.length;
+                changeStatus(taskItem, nextIndex);
+            });
+
+            function handleDescriptionEdit() {
+                taskDescription.classList.toggle('hidden');
+                descriptionForm.classList.toggle('hidden');
+                if (!descriptionForm.classList.contains('hidden')) {
+                    descriptionInput.value = taskDescription.textContent === 'Adicionar uma descrição...' ? '' : taskDescription.textContent;
+                    descriptionInput.focus();
+                }
+            }
+
+            editDescriptionButton.addEventListener('click', handleDescriptionEdit);
+            taskDescription.addEventListener('click', handleDescriptionEdit);
+
+            descriptionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newDescription = descriptionInput.value.trim();
+                taskDescription.textContent = newDescription === '' ? 'Adicionar uma descrição...' : newDescription;
+                handleDescriptionEdit();
+            });
+
+            addSubtaskButton.addEventListener('click', () => {
+                subtaskForm.classList.toggle('hidden');
+                subtaskInput.focus();
+            });
+
+            subtaskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const subtaskText = subtaskInput.value.trim();
+                if (subtaskText) {
+                    const newSubtask = createSubtaskElement(subtaskText, taskEntry);
+                    subtaskList.appendChild(newSubtask);
+                    subtaskInput.value = '';
+                    syncParentStatus(taskEntry);
+                }
+            });
+        }
+
+        function applyFiltersAndSearch() {
+            const searchTerm = searchInput.value.toLowerCase();
+            document.querySelectorAll('.task-entry').forEach(taskEntry => {
+                const taskText = taskEntry.querySelector('.task-item .task-text').textContent.toLowerCase();
+                const taskDesc = taskEntry.querySelector('.task-item .task-description').textContent.toLowerCase();
+                const taskStatus = taskEntry.querySelector('.task-item .status-badge').textContent;
+
+                const searchMatch = taskText.includes(searchTerm) || taskDesc.includes(searchTerm);
+                const filterMatch = activeFilter === 'Todos' || taskStatus === activeFilter;
+
+                if (searchMatch && filterMatch) {
+                    taskEntry.style.display = '';
+                } else {
+                    taskEntry.style.display = 'none';
+                }
+            });
+        }
+        
+        function initializeFilters() {
+            let buttonsHTML = `<button data-filter="Todos" class="filter-btn active px-3 py-1 text-sm font-medium rounded-md bg-blue-600 text-white dark:bg-blue-600 transition">Todos</button>`;
+            statuses.forEach(status => {
+                buttonsHTML += `<button data-filter="${status.name}" class="filter-btn px-3 py-1 text-sm font-medium rounded-md bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 transition">${status.name}</button>`;
+            });
+            filterButtonsContainer.innerHTML = buttonsHTML;
+        }
+
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const taskText = taskInput.value.trim();
+            
+            if (taskText !== '') {
+                const newTask = createTaskElement(taskText);
+                taskList.prepend(newTask);
+                taskInput.value = '';
+                taskInput.focus();
+                updateStatusSummary();
+                applyFiltersAndSearch();
+            }
+        });
+        
+        // --- Lógica do Modo Escuro ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+        const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+        
+        function applyTheme() {
+            if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                themeToggleLightIcon.classList.remove('hidden');
+                themeToggleDarkIcon.classList.add('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggleDarkIcon.classList.remove('hidden');
+                themeToggleLightIcon.classList.add('hidden');
+            }
+        }
+
+        themeToggleBtn.addEventListener('click', function() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('color-theme', isDark ? 'dark' : 'light');
+            applyTheme();
+        });
+
+
+        // --- Lógica de Download ---
+        const downloadBtn = document.getElementById('download-btn');
+        downloadBtn.addEventListener('click', () => {
+            const tasksData = [];
+            document.querySelectorAll('.task-entry').forEach(taskEntry => {
+                const taskText = taskEntry.querySelector('.task-item .task-text').textContent;
+                let description = taskEntry.querySelector('.task-description').textContent;
+                if (description === 'Adicionar uma descrição...') description = '';
+                
+                const statusIndex = parseInt(taskEntry.querySelector('.task-item .status-badge').dataset.statusIndex);
+                const statusName = statuses[statusIndex].name;
+                const completed = taskEntry.querySelector('.task-item').classList.contains('completed');
+                const createdAt = taskEntry.querySelector('.task-item .timestamp').textContent;
+
+                const subtasksData = [];
+                taskEntry.querySelectorAll('.subtask-item').forEach(subtaskItem => {
+                    const subtaskText = subtaskItem.querySelector('.task-text').textContent;
+                    const subtaskStatusIndex = parseInt(subtaskItem.querySelector('.status-badge').dataset.statusIndex);
+                    const subtaskStatusName = statuses[subtaskStatusIndex].name;
+                    const subtaskCompleted = subtaskItem.classList.contains('completed');
+                    const subtaskCreatedAt = subtaskItem.querySelector('.timestamp').textContent;
+                    subtasksData.push({
+                        text: subtaskText,
+                        status: subtaskStatusName,
+                        completed: subtaskCompleted,
+                        createdAt: subtaskCreatedAt
+                    });
+                });
+                
+                tasksData.push({
+                    text: taskText,
+                    description: description,
+                    status: statusName,
+                    completed: completed,
+                    createdAt: createdAt,
+                    subtasks: subtasksData
+                });
+            });
+
+            const dataStr = JSON.stringify(tasksData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'tarefas.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+        
+        searchInput.addEventListener('input', applyFiltersAndSearch);
+
+        filterButtonsContainer.addEventListener('click', (e) => {
+            const target = e.target.closest('.filter-btn');
+            if (!target) return;
+
+            const currentActive = filterButtonsContainer.querySelector('.active');
+            if(currentActive) {
+                currentActive.classList.remove('active', 'bg-blue-600', 'text-white', 'dark:bg-blue-600');
+                currentActive.classList.add('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-200');
+            }
+            
+            target.classList.add('active', 'bg-blue-600', 'text-white', 'dark:bg-blue-600');
+            target.classList.remove('bg-gray-200', 'dark:bg-gray-700', 'text-gray-700', 'dark:text-gray-200');
+            
+            activeFilter = target.dataset.filter;
+            applyFiltersAndSearch();
+        });
+        
+        // --- Lógica do Modal da API Key ---
+        const apiKeyBtn = document.getElementById('api-key-btn');
+        const apiKeyModal = document.getElementById('api-key-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+        const apiKeyInput = document.getElementById('api-key-input');
+
+        function updateAIVisibility() {
+            const aiButtons = document.querySelectorAll('.generate-description-btn, .generate-subtasks-btn');
+            if (apiKey) {
+                aiButtons.forEach(btn => btn.classList.remove('hidden'));
+            } else {
+                aiButtons.forEach(btn => btn.classList.add('hidden'));
+            }
+        }
+        
+        apiKeyBtn.addEventListener('click', () => {
+            apiKeyInput.value = apiKey;
+            apiKeyModal.classList.remove('hidden');
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            apiKeyModal.classList.add('hidden');
+        });
+        
+        apiKeyModal.addEventListener('click', (e) => {
+            if(e.target === apiKeyModal) {
+                 apiKeyModal.classList.add('hidden');
+            }
+        });
+
+        saveApiKeyBtn.addEventListener('click', () => {
+            const newKey = apiKeyInput.value.trim();
+            localStorage.setItem('gemini-api-key', newKey);
+            apiKey = newKey;
+            updateAIVisibility();
+            apiKeyModal.classList.add('hidden');
+        });
+
+
+        // Inicialização quando a página carrega
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(); // Aplica o tema correto ao carregar
+            initializeStatusSummary();
+            initializeFilters();
+            if (taskList.children.length === 0) {
+                 const task1 = createTaskElement(
+                    "Reunião de equipe", 
+                    "Discutir os resultados do último trimestre.", 
+                    emAndamentoIndex,
+                    false,
+                    [{text: "Preparar apresentação", status: "Aberto", completed: false, createdAt: new Date().toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}]
+                 );
+                 taskList.appendChild(task1);
+
+                 const task2 = createTaskElement("Enviar relatório mensal", "Adicionar uma descrição...", finalizadoIndex, true);
+                 taskList.appendChild(task2);
+            }
+            document.querySelectorAll('.task-entry').forEach(entry => {
+                attachTaskEvents(entry);
+                syncParentStatus(entry);
+            });
+            updateStatusSummary();
+            applyFiltersAndSearch();
+            updateAIVisibility(); // Checa a visibilidade dos botões de IA ao carregar a página
+        });
+
+    </script>
+</body>
+</html>
+
