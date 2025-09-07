@@ -1,16 +1,16 @@
-/* Tipografia base */
+/* Tipografia e transições base */
 body {
   font-family: 'Inter', sans-serif;
   transition: background-color 0.3s ease;
 }
 
-/* Transições dos itens */
+/* Animações/efeitos de itens */
 .task-item, .subtask-item, .task-entry {
   transition: all 0.3s ease;
   overflow: hidden;
 }
 
-/* Risco no texto quando concluído */
+/* Linha animada ao concluir */
 .task-text {
   position: relative;
   transition: color 0.4s ease;
@@ -27,29 +27,68 @@ body {
   transform-origin: left;
   transition: transform 0.4s ease;
 }
+.completed .task-text {
+  color: #9ca3af; /* gray-400 */
+}
+.completed .task-text::after {
+  transform: scaleX(1);
+}
+.completed .task-description {
+  color: #9ca3af;
+}
+.dark .completed .task-text,
+.dark .completed .task-description {
+  color: #4b5563; /* gray-600 */
+}
 
-.completed .task-text { color: #9ca3af; }
-.completed .task-text::after { transform: scaleX(1); }
-.completed .task-description { color: #9ca3af; }
-.dark .completed .task-text, .dark .completed .task-description { color: #4b5563; }
+/* Ações aparecem no hover */
+.task-actions, .project-actions {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.task-item:hover .task-actions, .project-tab:hover .project-actions {
+  opacity: 1;
+}
+.project-tab.active .project-actions {
+  opacity: 1;
+}
 
-/* Ações só no hover */
-.task-actions { opacity: 0; transition: opacity 0.3s ease; }
-.task-item:hover .task-actions { opacity: 1; }
+/* Subtarefas: botão excluir só no hover */
+.subtask-item .delete-button {
+  opacity: 0;
+}
+.subtask-item:hover .delete-button {
+  opacity: 1;
+}
 
-/* Subtarefas: botão delete no hover */
-.subtask-item .delete-button { opacity: 0; }
-.subtask-item:hover .delete-button { opacity: 1; }
+/* Filtros/Tabs/Projetos ativos */
+.filter-btn.active {
+  background-color: #3b82f6;
+  color: white;
+}
+.dark .filter-btn.active {
+  background-color: #3b82f6;
+}
 
-/* Estado ativo de filtros/abas */
-.filter-btn.active { background-color: #3b82f6; color: white; }
-.dark .filter-btn.active { background-color: #3b82f6; }
+.project-tab.active {
+  background-color: #3b82f6;
+  color: white;
+}
+.dark .project-tab.active {
+  background-color: #3b82f6;
+}
 
-.project-tab.active { background-color: #3b82f6; color: white; }
-.dark .project-tab.active { background-color: #3b82f6; }
+.tab-btn.active {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+.dark .tab-btn.active {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
 
-.tab-btn.active { border-color: #3b82f6; color: #3b82f6; }
-.dark .tab-btn.active { border-color: #3b82f6; color: #3b82f6; }
-
-/* Chat height */
-#chat-history { height: 400px; overflow-y: auto; }
+/* Chat */
+#chat-history {
+  height: 400px;
+  overflow-y: auto;
+}

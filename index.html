@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Lista de Tarefas Elegante</title>
 
-  <!-- Tailwind -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = { darkMode: 'class' }
@@ -22,15 +22,13 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Styles -->
-  <link rel="stylesheet" href="styles.css"/>
+  <!-- Estilos custom -->
+  <link rel="stylesheet" href="./styles.css"/>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 flex items-center justify-center min-h-screen p-4">
-
   <!-- Contêiner Principal -->
   <div class="bg-white dark:bg-gray-800 w-full max-w-lg mx-auto rounded-2xl shadow-2xl p-6 md:p-8 transition-colors duration-300 relative">
-
-    <!-- Botões topo -->
+    <!-- Botões de Ação Superiores -->
     <div class="absolute top-5 right-5 flex items-center gap-2 z-10">
       <button id="api-key-btn" title="Configurar API Key" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm p-2.5">
         <i class="fas fa-key"></i>
@@ -48,7 +46,7 @@
     <div id="project-tabs-container" class="mb-4">
       <div class="flex items-center gap-2 flex-wrap">
         <div id="project-tabs" class="flex items-center gap-2 flex-wrap">
-          <!-- Abas de projeto via JS -->
+          <!-- Abas de projeto serão geradas aqui -->
         </div>
         <button id="add-project-btn" title="Adicionar novo projeto" class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition">
           <i class="fas fa-plus"></i>
@@ -59,15 +57,21 @@
     <!-- Abas de Visualização -->
     <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
       <nav id="tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
-        <button data-tab="tasks" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Tarefas</button>
-        <button data-tab="chat" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">Chat IA</button>
-        <button data-tab="analysis" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">Análise</button>
+        <button data-tab="tasks" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+          Tarefas
+        </button>
+        <button data-tab="chat" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">
+          Chat IA
+        </button>
+        <button data-tab="analysis" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 border-transparent">
+          Análise
+        </button>
       </nav>
     </div>
 
-    <!-- Conteúdo -->
+    <!-- Conteúdo das Abas -->
     <div id="tab-content">
-      <!-- Tarefas -->
+      <!-- Aba de Tarefas -->
       <div id="tasks-view">
         <header class="text-center mb-8 pt-12">
           <h1 id="main-header-title" class="text-4xl font-bold text-gray-800 dark:text-gray-100"></h1>
@@ -75,9 +79,15 @@
         </header>
 
         <form id="task-form" class="flex items-center gap-3 mb-6">
-          <input id="task-input" type="text" placeholder="Ex: Fazer uma caminhada..." autocomplete="off"
-                 class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
-          <button type="submit" class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
+          <input
+            type="text"
+            id="task-input"
+            placeholder="Ex: Fazer uma caminhada..."
+            class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            autocomplete="off"/>
+          <button
+            type="submit"
+            class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
             <i class="fas fa-plus"></i>
           </button>
         </form>
@@ -87,8 +97,7 @@
         <div class="flex flex-col sm:flex-row items-center gap-4 mb-6">
           <div class="relative w-full sm:flex-grow">
             <i class="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"></i>
-            <input id="search-input" type="text" placeholder="Pesquisar tarefas..."
-                   class="w-full pl-10 p-2.5 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+            <input type="text" id="search-input" placeholder="Pesquisar tarefas..." class="w-full pl-10 p-2.5 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
           </div>
         </div>
 
@@ -97,7 +106,7 @@
         <div id="task-list" class="space-y-4"></div>
       </div>
 
-      <!-- Chat -->
+      <!-- Aba do Chat -->
       <div id="chat-view" class="hidden">
         <header class="text-center mb-8">
           <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Assistente IA</h1>
@@ -122,15 +131,14 @@
             <i class="fas fa-paperclip"></i>
           </button>
           <input type="file" id="chat-file-input" class="hidden" accept=".txt,.md,.text"/>
-          <input id="chat-input" type="text" placeholder="Digite sua mensagem..." autocomplete="off"
-                 class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"/>
+          <input type="text" id="chat-input" placeholder="Digite sua mensagem..." class="flex-grow p-3 border-2 bg-transparent border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition" autocomplete="off"/>
           <button type="submit" class="bg-blue-600 text-white font-semibold py-3 px-5 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition transform hover:scale-105">
             <i class="fas fa-paper-plane"></i>
           </button>
         </form>
       </div>
 
-      <!-- Análise -->
+      <!-- Aba de Análise -->
       <div id="analysis-view" class="hidden">
         <header class="text-center mb-8">
           <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
@@ -170,7 +178,7 @@
     </div>
   </div>
 
-  <!-- Modal API Key -->
+  <!-- Modal da API Key -->
   <div id="api-key-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md relative">
       <button id="close-modal-btn" class="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
@@ -180,17 +188,20 @@
       <div>
         <label for="api-key-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Sua API Key</label>
         <div class="mt-1">
-          <input type="password" id="api-key-input" class="block w-full p-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-800 dark:text-gray-200" placeholder="Cole sua chave aqui..."/>
+          <input type="password" id="api-key-input" class="block w-full p-2 border bg-transparent border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm text-gray-800 dark:text-gray-200" placeholder="Cole sua chave aqui...">
         </div>
         <a href="https://aistudio.google.com/app/apikey" target="_blank" class="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">Obtenha sua API Key aqui</a>
       </div>
       <div class="mt-5 sm:mt-6">
-        <button id="save-api-key-btn" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">Salvar</button>
+        <button id="save-api-key-btn" type="button" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:text-sm">
+          Salvar
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- App JS -->
-  <script defer src="app.js"></script>
+  <!-- Scripts do projeto -->
+  <script src="./utils.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
