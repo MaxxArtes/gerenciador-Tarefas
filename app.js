@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTimeout(() => {
         subtaskItem.remove();
         syncParentStatus(parentTaskEntry);
-        saveProjectData();
+        saveProjectData(); // corrigido (antes havia saveTasks())
       }, 300);
     });
 
@@ -669,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { name, args } = part.functionCall;
       if (name === 'createTask') {
         const resultText = handleCreateTask(args);
+        // segunda chamada para fechar o ciclo de tool-usage (opcional)
         updateMessage(resultText || "Tarefa criada com sucesso!");
       } else {
         updateMessage("Função desconhecida.");
@@ -739,7 +740,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     projectsData[activeProject] = tasksData;
     localStorage.setItem('projects-data', JSON.stringify(projectsData));
-    localStorage.setItem('active-project', activeProject);
   }
 
   function loadTasksForProject() {
@@ -747,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const tasksToLoad = projectsData[activeProject] || [];
     tasksToLoad.forEach(t => {
       const statusIndex = Math.max(0, statuses.findIndex(s => s.name === t.status));
-      const elTask = createTaskElement(
+      const el = createTaskElement(
         t.text,
         t.description || 'Adicionar uma descrição...',
         statusIndex,
@@ -757,7 +757,7 @@ document.addEventListener('DOMContentLoaded', () => {
         t.statusStartTime,
         t.statusHistory
       );
-      taskList.appendChild(elTask);
+      taskList.appendChild(el);
     });
 
     document.querySelectorAll('.task-entry').forEach(attachTaskEvents);
@@ -770,27 +770,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabsContainer = document.getElementById('project-tabs');
     tabsContainer.innerHTML = '';
     Object.keys(projectsData).forEach(projectName => {
-      const isActive = projectName === activeProject;
-      const tab = el('div'); // wrapper para facilitar clique em ações
-      tab.innerHTML = `
-        <button
-          class="project-tab px-3 py-1 text-sm font-medium rounded-md transition ${isActive ? 'active' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'} flex items-center gap-2"
-          data-project="${projectName}"
-          title="${projectName}">
-          <span class="truncate max-w-[10rem]">${projectName}</span>
-          <span class="project-actions flex items-center gap-1 ml-1">
-            <button class="text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white"
-                    title="Renomear projeto" data-action="rename" data-project="${projectName}">
-              <i class="fas fa-pen"></i>
-            </button>
-            <button class="text-gray-500 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400"
-                    title="Excluir projeto" data-action="delete" data-project="${projectName}">
-              <i class="fas fa-trash"></i>
-            </button>
-          </span>
-        </button>
-      `;
-      tabsContainer.appendChild(tab.firstElementChild);
+      const tab = el('button',
+        `project-tab px-3 py-1 text-sm font-medium rounded-md transition ${projectName === activeProject ? 'active' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`
+      );
+      tab.dataset.project = projectName;
+      tab.textContent = projectName;
+      tabsContainer.appendChild(tab);
     });
     document.getElementById('main-header-title').textContent = activeProject;
   }
@@ -798,46 +783,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function switchProject(projectName) {
     activeProject = projectName;
     localStorage.setItem('active-project', projectName);
-    renderProjectTabs();
-    loadTasksForProject();
-  }
-
-  function renameProject(projectName) {
-    const current = projectName;
-    const newName = prompt("Novo nome do projeto:", current);
-    if (!newName || newName.trim() === '' || newName === current) return;
-    if (projectsData[newName]) {
-      alert("Já existe um projeto com esse nome.");
-      return;
-    }
-    projectsData[newName] = projectsData[current] || [];
-    delete projectsData[current];
-    if (activeProject === current) activeProject = newName;
-    localStorage.setItem('projects-data', JSON.stringify(projectsData));
-    localStorage.setItem('active-project', activeProject);
-    renderProjectTabs();
-    loadTasksForProject();
-  }
-
-  function deleteProject(projectName) {
-    const total = Object.keys(projectsData).length;
-    if (total <= 1) {
-      alert("Você precisa ter pelo menos um projeto.");
-      return;
-    }
-    const ok = confirm(`Excluir o projeto "${projectName}"? Esta ação removerá todas as tarefas desse projeto.`);
-    if (!ok) return;
-
-    delete projectsData[projectName];
-
-    if (activeProject === projectName) {
-      // pega o primeiro restante
-      activeProject = Object.keys(projectsData)[0];
-    }
-
-    localStorage.setItem('projects-data', JSON.stringify(projectsData));
-    localStorage.setItem('active-project', activeProject);
-
     renderProjectTabs();
     loadTasksForProject();
   }
@@ -946,7 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
     apiKeyModal.classList.add('hidden');
   });
 
-  // Tabs (Tasks/Chat/Analysis)
+  // Tabs
   const tabs = document.getElementById('tabs');
   const tasksView = document.getElementById('tasks-view');
   const analysisView = document.getElementById('analysis-view');
@@ -1011,28 +956,9 @@ document.addEventListener('DOMContentLoaded', () => {
     saveProjectData();
   });
 
-  // Clique nas abas de projeto + ações (renomear/excluir)
   document.getElementById('project-tabs').addEventListener('click', (e) => {
-    // Ação Renomear
-    const renameBtn = e.target.closest('[data-action="rename"]');
-    if (renameBtn) {
-      const p = renameBtn.dataset.project;
-      renameProject(p);
-      return;
-    }
-    // Ação Excluir
-    const deleteBtn = e.target.closest('[data-action="delete"]');
-    if (deleteBtn) {
-      const p = deleteBtn.dataset.project;
-      deleteProject(p);
-      return;
-    }
-    // Selecionar projeto
-    const tab = e.target.closest('.project-tab');
-    if (tab) {
-      const p = tab.dataset.project;
-      if (p) switchProject(p);
-    }
+    const target = e.target.closest('.project-tab');
+    if (target) switchProject(target.dataset.project);
   });
 
   // ===================================================================
